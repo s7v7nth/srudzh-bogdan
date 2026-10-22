@@ -29,8 +29,9 @@ struct ChaosHomeView: View {
     @State private var editingCategory: Category?
 
     private let circle: CGFloat = 50
-    private let nodeHeight: CGFloat = 100
-    private let zoneTitleHeight: CGFloat = 18
+    private let nodeHeight: CGFloat = 98
+    private let zoneTitleHeight: CGFloat = 26
+    private let widgetHeight: CGFloat = 140
     private let space = "chaos"
 
     enum NodeID: Hashable { case account(PersistentIdentifier), category(UUID) }
@@ -110,7 +111,7 @@ struct ChaosHomeView: View {
             BudgetProgress.make(b, transactions: transactions, rates: rates).map { (b.persistentModelID, $0) }
         })
         NavigationStack {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 header
                 PagedStrip(count: 3) { i in
                     switch i {
@@ -165,7 +166,7 @@ struct ChaosHomeView: View {
 
     private var header: some View {
         HStack {
-            Button { showSettings = true } label: { Image(systemName: "gearshape").font(.app(.title3)).frame(width: 44, height: 44) }
+            Button { showSettings = true } label: { Image(systemName: "gearshape").font(.app(.title3)).frame(width: 44, height: 44, alignment: .leading) }
                 .accessibilityLabel(Text("settings.title"))
             Spacer()
             Button {
@@ -177,7 +178,7 @@ struct ChaosHomeView: View {
                     .foregroundStyle(editing ? Color.white : Color.primary)
             }
         }
-        .padding(.horizontal, 8).frame(height: 40)
+        .padding(.horizontal, 12).frame(height: 36)
     }
 
     // MARK: Виджеты
@@ -185,6 +186,7 @@ struct ChaosHomeView: View {
     private func card<C: View>(@ViewBuilder _ content: () -> C) -> some View {
         content()
             .padding(14).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(height: widgetHeight)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .shadow(color: .black.opacity(0.05), radius: 6, y: 2)
             .padding(.horizontal, 12)
@@ -245,7 +247,7 @@ struct ChaosHomeView: View {
     private var scheduledWidget: some View {
         let items = dueItems
         return card {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Label("widget.sched.title", systemImage: "repeat").font(.app(.caption, .semibold)).foregroundStyle(.secondary)
                     Spacer()
@@ -259,9 +261,9 @@ struct ChaosHomeView: View {
                     }
                     Spacer(minLength: 0)
                 } else {
-                    ForEach(items.prefix(3)) { r in scheduledRow(r) }
-                    if items.count > 3 {
-                        Text(fmt("widget.sched.more", items.count - 3)).font(.app(.caption)).foregroundStyle(.secondary)
+                    ForEach(items.prefix(2)) { r in scheduledRow(r) }
+                    if items.count > 2 {
+                        Text(fmt("widget.sched.more", items.count - 2)).font(.app(.caption)).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -320,7 +322,7 @@ struct ChaosHomeView: View {
     private func zoneTitle(_ key: LocalizedStringKey) -> some View {
         Text(key).font(.app(.caption2, .semibold)).textCase(.uppercase).tracking(0.6)
             .foregroundStyle(ChaosPalette.label)
-            .padding(.leading, 16).frame(height: zoneTitleHeight, alignment: .center)
+            .padding(.leading, 20).padding(.top, 6).frame(height: zoneTitleHeight, alignment: .center)
     }
 
     private func ribbon<C: View>(_ title: LocalizedStringKey, tint: Color, @ViewBuilder _ content: () -> C) -> some View {
@@ -358,8 +360,9 @@ struct ChaosHomeView: View {
                 }
                 .padding(.horizontal, 8).frame(maxHeight: .infinity, alignment: .top)
             }
-            .frame(height: nodeHeight * 2 + 24)
+            .frame(height: nodeHeight * 2 + 16)
         }
+        .padding(.bottom, 8)
         .background(ChaosPalette.zone(ChaosPalette.expense))
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding(.horizontal, 12)
@@ -367,14 +370,15 @@ struct ChaosHomeView: View {
 
     private func addCell(color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 Text(" ").font(.app(.caption))
                 Color.clear.frame(width: circle, height: circle)
                     .overlay { Image(systemName: "plus").font(.app(.title3, .semibold)).foregroundStyle(color) }
                     .liquidGlass(tint: color.opacity(0.18))
                     .frame(width: circle + 12, height: circle + 12)
             }
-            .frame(width: 84, height: nodeHeight, alignment: .top)
+            .frame(height: nodeHeight, alignment: .top)
+            .containerRelativeFrame(.horizontal) { w, _ in (w - 16) / 4 }
         }
         .buttonStyle(.plain).opacity(drag == nil ? 1 : 0.3)
         .accessibilityLabel(Text("chaos.add"))
@@ -407,7 +411,7 @@ struct ChaosHomeView: View {
         let isHover = hovered == id
         let isSource = drag?.id == id
         let dimmed = drag != nil && !isSource && !canDrop(drag!.id, onto: id)
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {
             Text(title).font(.app(.caption)).foregroundStyle(ChaosPalette.label).lineLimit(1).minimumScaleFactor(0.8)
                 .frame(height: 15)
             bubble(icon: icon, color: color, progress: progress)
@@ -419,8 +423,8 @@ struct ChaosHomeView: View {
             MoneyText(amount: amount, code: code).font(.app(.caption, .bold)).foregroundStyle(valueColor)
                 .brightness(amount < 0 || alert ? -0.15 : 0).opacity(zero ? 0.5 : 1).lineLimit(1).minimumScaleFactor(0.85)
         }
-        .frame(width: 84, height: nodeHeight, alignment: .top)
-        .frame(maxWidth: .infinity)
+        .frame(height: nodeHeight, alignment: .top)
+        .containerRelativeFrame(.horizontal) { w, _ in (w - 16) / 4 }
         .opacity(isSource ? 0.35 : (dimmed ? 0.4 : (hidden ? 0.45 : 1)))
         .background(GeometryReader { g in
             Color.clear.preference(key: FramesKey.self, value: [id: g.frame(in: .named(space))])
