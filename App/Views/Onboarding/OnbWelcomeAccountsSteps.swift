@@ -4,6 +4,11 @@ import LedgerCore
 struct OnbWelcomeStep: View {
     let draft: OnboardingDraft
     let isRerun: Bool
+    #if DEBUG
+    @State private var showImport = CommandLine.arguments.contains("-csvSheet")
+    #else
+    @State private var showImport = false
+    #endif
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -11,6 +16,7 @@ struct OnbWelcomeStep: View {
             if isRerun {
                 Label("onb.rerun.note", systemImage: "info.circle").font(.app(.footnote)).foregroundStyle(Theme.warn)
             }
+            importCard
             Text("onb.currency.label").font(.app(.subheadline, .semibold)).foregroundStyle(.secondary).padding(.top, 4)
             OnbCard {
                 ForEach(Currencies.all) { c in
@@ -31,6 +37,31 @@ struct OnbWelcomeStep: View {
                 }
             }
         }
+    }
+}
+
+extension OnbWelcomeStep {
+    /// Загрузка истории из CSV: счета и категории подтянутся из файла, эти шаги онбординга пропустятся.
+    @ViewBuilder fileprivate var importCard: some View {
+        OnbCard {
+            if let l = draft.imported {
+                HStack(spacing: 12) {
+                    OnbIcon(name: "checkmark.circle.fill")
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("onb.import.done").font(.app(.body, .semibold))
+                        Text("onb.import.doneDetail \(l.entries.count) \(l.accounts.count)").font(.app(.caption)).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("onb.import.remove") { withAnimation(.snappy) { draft.clearImport() } }.font(.app(.subheadline))
+                }
+            } else {
+                Text("onb.import.title").font(.app(.body, .semibold))
+                Text("onb.import.subtitle").font(.app(.footnote)).foregroundStyle(.secondary)
+                Button { showImport = true } label: { Label("onb.import.button", systemImage: "square.and.arrow.down").onbChip(selected: true) }
+                    .buttonStyle(.plain)
+            }
+        }
+        .sheet(isPresented: $showImport) { OnbImportSheet { draft.applyImport($0) } }
     }
 }
 

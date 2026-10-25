@@ -20,6 +20,7 @@ struct OnbSummaryStep: View {
         VStack(alignment: .leading, spacing: 16) {
             OnbHeader(icon: "checkmark.seal", title: "onb.summary.title", subtitle: "onb.summary.subtitle")
             OnbCard {
+                if let l = draft.imported { countRow("list.bullet.rectangle", "onb.summary.transactions", l.entries.count) }
                 countRow("creditcard", "onb.summary.accounts", accountCount)
                 countRow("square.grid.2x2", "onb.summary.categories", draft.expenseCategories.count)
                 countRow("chart.pie", "onb.summary.budgets", budgetCount)
