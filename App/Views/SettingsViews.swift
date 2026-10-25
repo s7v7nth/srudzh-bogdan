@@ -93,10 +93,12 @@ struct SettingsView: View {
                     }
                     NavigationLink("settings.categories") { CategoriesView() }
                     NavigationLink("sms.title") { SMSSettingsView() }
+                    NavigationLink("backup.title") { BackupSettingsView() }
                     Button { showReset = true } label: {
                         Label("settings.onboarding", systemImage: "wand.and.stars")
                     }
                 }
+                EveningDigestSettingsSection()
                 Section {
                     LabeledContent("rates.updated") {
                         if let d = rates.lastUpdated { Text(d.formatted(date: .abbreviated, time: .shortened)) }

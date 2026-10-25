@@ -113,6 +113,11 @@ struct ChaosHomeView: View {
         NavigationStack {
             VStack(spacing: 6) {
                 header
+                if AutoBackup.shared.needsAttention {
+                    BackupBanner().padding(12)
+                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .padding(.horizontal, 16)
+                }
                 PagedStrip(count: 3) { i in
                     switch i {
                     case 0: balanceWidget(cache)

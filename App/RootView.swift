@@ -10,6 +10,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var phase
     @Query(filter: #Predicate<LedgerTransaction> { $0.smsReview != 0 }) private var pendingSMS: [LedgerTransaction]
     @State private var showReview = false
+    @State private var askBackup = false
     @AppStorage("onboardingDone") private var onboardingDone = false
     @Query private var accounts: [Account]
 
@@ -19,6 +20,7 @@ struct RootView: View {
     /// При заходе в приложение показываем разбор, если накопились СМС банка.
     private func openReviewIfNeeded() {
         if !pendingSMS.isEmpty, !rates.base.isEmpty, addType == nil { showReview = true }
+        else if !needsOnboarding, !AutoBackup.shared.asked, !AutoBackup.shared.hasFolder { askBackup = true }
     }
 
     var body: some View {
@@ -41,8 +43,12 @@ struct RootView: View {
         }
         .sheet(item: $addType) { AddTransactionView(type: $0) }
         .sheet(isPresented: $showReview) { SMSReviewView() }
+        .sheet(isPresented: $askBackup, onDismiss: { AutoBackup.shared.asked = true }) { BackupPromptSheet() }
         .onAppear(perform: openReviewIfNeeded)
-        .onChange(of: phase) { if phase == .active { openReviewIfNeeded() } }
+        .onChange(of: phase) {
+            if phase == .active { openReviewIfNeeded(); EveningNotifier.shared.reschedule() }
+            if phase == .background { AutoBackup.shared.flush() }
+        }
         .fullScreenCover(isPresented: Binding(get: { needsOnboarding }, set: { _ in })) {
             OnboardingFlow(initialCurrency: rates.base.isEmpty ? Currencies.deviceDefault : rates.base) { onboardingDone = true }
         }

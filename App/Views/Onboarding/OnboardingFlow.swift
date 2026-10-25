@@ -3,7 +3,7 @@ import SwiftData
 import LedgerCore
 
 enum OnbStep: Int, CaseIterable {
-    case welcome, accounts, income, categories, bills, loans, subscriptions, budgets, summary
+    case welcome, accounts, income, categories, bills, loans, subscriptions, budgets, evening, backup, summary
 }
 
 /// Пошаговая настройка: валюта, счета, доходы, категории, платежи, кредиты, подписки, бюджеты, итог.
@@ -51,6 +51,8 @@ struct OnboardingFlow: View {
         case .bills: !draft.bills.contains(where: \.isActive)
         case .loans: !draft.loans.contains(where: \.isActive) && draft.credits.isEmpty
         case .subscriptions: !draft.subscriptions.contains(where: \.isActive)
+        case .evening: !EveningNotifier.shared.enabled
+        case .backup: !AutoBackup.shared.hasFolder
         default: false
         }
     }
@@ -118,7 +120,7 @@ struct OnboardingFlow: View {
 
     @ViewBuilder private var content: some View {
         switch step {
-        case .welcome: OnbWelcomeStep(draft: draft, isRerun: isRerun)
+        case .welcome: OnbWelcomeStep(draft: draft, isRerun: isRerun, onRestored: onFinish)
         case .accounts: OnbAccountsStep(draft: draft)
         case .income:
             OnbPaymentsStep(header: OnbHeader(icon: "arrow.down.circle", title: "onb.income.title", subtitle: "onb.income.subtitle"),
@@ -140,6 +142,8 @@ struct OnboardingFlow: View {
                             isIncome: false, customCategory: "cat.subscriptions", customIcon: "star", addTitle: "onb.subs.add",
                             footer: nil, footerAmount: 0, currency: draft.currency, onEnable: { draft.ensureCategory($0.categoryKey) })
         case .budgets: OnbBudgetStep(draft: draft)
+        case .evening: OnbEveningStep(currency: draft.currency)
+        case .backup: OnbBackupStep()
         case .summary: OnbSummaryStep(draft: draft)
         }
     }
@@ -148,6 +152,8 @@ struct OnboardingFlow: View {
 
     private func advance() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        // Разрешение на уведомления спрашиваем, когда человек выбрал время сводки и понятно, зачем оно.
+        if step == .evening, EveningNotifier.shared.enabled { Task { await EveningNotifier.shared.requestPermission() } }
         if isLast { finish() } else { move(1) }
     }
 

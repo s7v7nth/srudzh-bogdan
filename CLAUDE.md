@@ -27,6 +27,6 @@
 - Собирать нужно с `-derivedDataPath` вне папки Documents (например `/private/tmp/claude-501/dd15`) и тесты пакета запускать с `swift test --scratch-path /private/tmp/claude-501/ledger-build`: внутри Documents подпись падает из-за служебных меток macOS.
 - Симулятор: iPhone 15 на iOS 26.5 (создан вместо тормозившего iPhone 18 Pro). Его id смотреть через `xcrun simctl list devices`.
 - Для проверки с примерами данных запускать с аргументами `-seedDemo -baseCurrency BYN` (работает только в отладочной сборке, код в `App/Support/DemoData.swift`).
-- Онбординг в отладочной сборке: `-onbDemo` заполняет ответы примерами, `-onbStep N` (0...8) открывает нужный шаг (код в `App/Support/DemoData.swift`). Запускать через `xcrun simctl launch`, на чистой установке (`simctl uninstall`).
+- Онбординг в отладочной сборке: `-onbDemo` заполняет ответы примерами, `-onbStep N` (0...10) открывает нужный шаг (код в `App/Support/DemoData.swift`). `-backupFolder <путь>` задаёт папку автокопий без окна выбора. Запускать через `xcrun simctl launch`, на чистой установке (`simctl uninstall`).
 - Кириллицу в поля симулятора лучше не вводить через инструмент (вставка портит текст и просит разрешение), названия для проверки писать латиницей.
 - Тексты интерфейса только через ключи в `App/Localizable.xcstrings` (русский и английский). Новый текст: добавить ключ в оба языка.

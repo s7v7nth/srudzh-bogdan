@@ -4,6 +4,8 @@ import LedgerCore
 struct OnbWelcomeStep: View {
     let draft: OnboardingDraft
     let isRerun: Bool
+    var onRestored: () -> Void = {}
+    @State private var showRestore = false
     #if DEBUG
     @State private var showImport = CommandLine.arguments.contains("-csvSheet")
     #else
@@ -17,6 +19,11 @@ struct OnbWelcomeStep: View {
                 Label("onb.rerun.note", systemImage: "info.circle").font(.app(.footnote)).foregroundStyle(Theme.warn)
             }
             importCard
+            Button { showRestore = true } label: {
+                Label("onb.restore.link", systemImage: "clock.arrow.circlepath").font(.app(.subheadline, .semibold))
+            }
+            .foregroundStyle(Theme.accent)
+            .sheet(isPresented: $showRestore) { BackupRestoreSheet(onRestored: onRestored) }
             Text("onb.currency.label").font(.app(.subheadline, .semibold)).foregroundStyle(.secondary).padding(.top, 4)
             OnbCard {
                 ForEach(Currencies.all) { c in

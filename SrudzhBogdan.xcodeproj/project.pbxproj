@@ -16,13 +16,18 @@
 		204C0E0DE132E9DA147C954F /* Manrope-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7C956D8C85AB93CBC80D4866 /* Manrope-Medium.ttf */; };
 		20BFFAA81A478D4EA9034C0E /* AddTransactionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405FE2A9ABDA2CF43A888D72 /* AddTransactionView.swift */; };
 		21CA67C27CEF96A0561C40CA /* Manrope-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4A17B6D2203E152A8B915F92 /* Manrope-ExtraBold.ttf */; };
+		28E018059A9B63E7274EB217 /* AutoBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBD13BAF44A7D1F74C6BA408 /* AutoBackup.swift */; };
 		29DC5D876EBB288D2ABEE181 /* SMSIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF08D6888758E47909331231 /* SMSIntent.swift */; };
 		2AE2EA68E351BAEF297F2A02 /* OnboardingFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB851F66817DE013E1DB0F36 /* OnboardingFlow.swift */; };
 		2BCB172713F9BA684B5AEBF7 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0DE49C5F87E4C13A20CE213E /* Manrope-Bold.ttf */; };
 		2C645D13BA129B2E913815C5 /* BynSign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EB149F315CE7E75045F008F /* BynSign.swift */; };
 		2FA6FC6D4AB398EA5DBA55AD /* OnboardingCommit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BE73190C4AAD9D876C774E8 /* OnboardingCommit.swift */; };
+		3092234840FF41145D9D95DC /* EveningNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABD1059774D7CEEAA0AC074 /* EveningNotifier.swift */; };
 		44749C1A9D954E2C4F84989E /* OnbBudgetStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116762DDB3717726FF052BA5 /* OnbBudgetStep.swift */; };
+		461906825DA1596838CA0037 /* EveningViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1794F2968F62B6BFDE050 /* EveningViews.swift */; };
 		4CDA49EB582F109D66A8D2C5 /* Manrope-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F4EE845C57BE3856A731E6D7 /* Manrope-Regular.ttf */; };
+		4DDCB5EB55DFF6A64BB9528B /* BackupSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945B4964B058A1FC2B096C57 /* BackupSnapshot.swift */; };
+		52AC6D24932ECAA518D48A10 /* BackupViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0987D19D4DCEB8A68B8BB98 /* BackupViews.swift */; };
 		549BEDBF54FCC5F9A12F0420 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4A4AD1D8AE5B9CB4877C52A /* ActivityView.swift */; };
 		576B0427A9FAEBD5C3E21E83 /* OnbWelcomeAccountsSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DC85C7337A7C9C61B75FCB /* OnbWelcomeAccountsSteps.swift */; };
 		61145A775359E1219FE45B73 /* Style.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57EF4DE0871B6EF1FD221720 /* Style.swift */; };
@@ -73,6 +78,7 @@
 		1D61E38F37A4A91CC3C65B10 /* OnbImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbImportSheet.swift; sourceTree = "<group>"; };
 		1DD494458B2437F46296E69E /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		1EB149F315CE7E75045F008F /* BynSign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BynSign.swift; sourceTree = "<group>"; };
+		1EC1794F2968F62B6BFDE050 /* EveningViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningViews.swift; sourceTree = "<group>"; };
 		2ABC24B25DDA3CD2B7922F81 /* ReportData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportData.swift; sourceTree = "<group>"; };
 		2BE0BBF4776D0237C7ED6692 /* NetWorthReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetWorthReport.swift; sourceTree = "<group>"; };
 		3722539025B0D4D95AB3C712 /* SMSViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMSViews.swift; sourceTree = "<group>"; };
@@ -97,7 +103,9 @@
 		840F9E96F25D3B26B48D4F56 /* BudgetsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetsView.swift; sourceTree = "<group>"; };
 		8BE73190C4AAD9D876C774E8 /* OnboardingCommit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCommit.swift; sourceTree = "<group>"; };
 		8FFA134F1CC9FA3E12670D2F /* LedgerCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LedgerCore; path = LedgerCore; sourceTree = SOURCE_ROOT; };
+		945B4964B058A1FC2B096C57 /* BackupSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupSnapshot.swift; sourceTree = "<group>"; };
 		A3960D8506A9E562BEB020BD /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
+		AABD1059774D7CEEAA0AC074 /* EveningNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningNotifier.swift; sourceTree = "<group>"; };
 		AC1A130331EC13BDF9D08A24 /* OnboardingComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingComponents.swift; sourceTree = "<group>"; };
 		B008CDE08E8F0EF95A3F1BA4 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		B8DC85C7337A7C9C61B75FCB /* OnbWelcomeAccountsSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbWelcomeAccountsSteps.swift; sourceTree = "<group>"; };
@@ -112,7 +120,9 @@
 		E4A4AD1D8AE5B9CB4877C52A /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		E9E3FBE61BF7FB8C7E720735 /* ScheduledView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledView.swift; sourceTree = "<group>"; };
 		EB851F66817DE013E1DB0F36 /* OnboardingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlow.swift; sourceTree = "<group>"; };
+		EBD13BAF44A7D1F74C6BA408 /* AutoBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoBackup.swift; sourceTree = "<group>"; };
 		ED802B836CC8DBD353BAA71D /* ForecastReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastReport.swift; sourceTree = "<group>"; };
+		F0987D19D4DCEB8A68B8BB98 /* BackupViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupViews.swift; sourceTree = "<group>"; };
 		F27D45C17596538634C10AD6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F318EFE178FC0DBDC4F7D91E /* OnboardingCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCatalog.swift; sourceTree = "<group>"; };
 		F4EE845C57BE3856A731E6D7 /* Manrope-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Regular.ttf"; sourceTree = "<group>"; };
@@ -191,9 +201,12 @@
 		B9B303EBAA27F031CAD5E0F0 /* Support */ = {
 			isa = PBXGroup;
 			children = (
+				EBD13BAF44A7D1F74C6BA408 /* AutoBackup.swift */,
+				945B4964B058A1FC2B096C57 /* BackupSnapshot.swift */,
 				1EB149F315CE7E75045F008F /* BynSign.swift */,
 				6917E5981413DB7B417666E9 /* Currencies.swift */,
 				A3960D8506A9E562BEB020BD /* DemoData.swift */,
+				AABD1059774D7CEEAA0AC074 /* EveningNotifier.swift */,
 				BD6D434917266A6E854F1C29 /* Helpers.swift */,
 				37C5F964276E72BFE4ABEB12 /* ImportStyle.swift */,
 				B008CDE08E8F0EF95A3F1BA4 /* Models.swift */,
@@ -213,10 +226,12 @@
 				3E99F2698CEFADCD0A44C2D3 /* AccountsView.swift */,
 				E4A4AD1D8AE5B9CB4877C52A /* ActivityView.swift */,
 				405FE2A9ABDA2CF43A888D72 /* AddTransactionView.swift */,
+				F0987D19D4DCEB8A68B8BB98 /* BackupViews.swift */,
 				840F9E96F25D3B26B48D4F56 /* BudgetsView.swift */,
 				795ADB18664F19F979A3D887 /* CategoryViews.swift */,
 				0448F648CE708CDBDE04E747 /* ChaosHomeView.swift */,
 				BCB6E4A0AE5E47599BD66E84 /* CreditLineView.swift */,
+				1EC1794F2968F62B6BFDE050 /* EveningViews.swift */,
 				E9E3FBE61BF7FB8C7E720735 /* ScheduledView.swift */,
 				F8ADE1D9A99662E7AFDDE7F7 /* SettingsViews.swift */,
 				3722539025B0D4D95AB3C712 /* SMSViews.swift */,
@@ -349,6 +364,9 @@
 				89A527B75EF2E1CCE68665D9 /* AccountsView.swift in Sources */,
 				549BEDBF54FCC5F9A12F0420 /* ActivityView.swift in Sources */,
 				20BFFAA81A478D4EA9034C0E /* AddTransactionView.swift in Sources */,
+				28E018059A9B63E7274EB217 /* AutoBackup.swift in Sources */,
+				4DDCB5EB55DFF6A64BB9528B /* BackupSnapshot.swift in Sources */,
+				52AC6D24932ECAA518D48A10 /* BackupViews.swift in Sources */,
 				BC40E0321B7EB70701AEE107 /* BreakdownReport.swift in Sources */,
 				15D4256FF03AF71236FBCE3E /* BudgetsReport.swift in Sources */,
 				A9ECCB9544F32E1A04AEF702 /* BudgetsView.swift in Sources */,
@@ -359,6 +377,8 @@
 				D605F3926D64410EA727AFEA /* CreditLineView.swift in Sources */,
 				6ADDD09C666485781E2E2AC0 /* Currencies.swift in Sources */,
 				7BAD08BCF2CE24D8BAE5396C /* DemoData.swift in Sources */,
+				3092234840FF41145D9D95DC /* EveningNotifier.swift in Sources */,
+				461906825DA1596838CA0037 /* EveningViews.swift in Sources */,
 				64165A867A5F834F3505CBA1 /* ForecastReport.swift in Sources */,
 				094288527585C51C98E20042 /* HabitsReports.swift in Sources */,
 				F2AE89392B15A22B3A1BD3F8 /* Helpers.swift in Sources */,

@@ -10,6 +10,15 @@ import SwiftData
         #if DEBUG
         DemoData.runIfRequested(c.mainContext, rates: rates)
         #endif
+        AutoBackup.shared.start(container: c, rates: rates)
+        EveningNotifier.shared.start(container: c, rates: rates)
+        #if DEBUG
+        // -backupFolder <путь>: папка для копий без окна выбора (для проверки в симуляторе).
+        let args = CommandLine.arguments
+        if let i = args.firstIndex(of: "-backupFolder"), i + 1 < args.count {
+            try? AutoBackup.shared.setFolder(URL(fileURLWithPath: args[i + 1], isDirectory: true))
+        }
+        #endif
         return c
     }()
 }

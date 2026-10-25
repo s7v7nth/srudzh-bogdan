@@ -50,6 +50,7 @@ struct AccountsView: View {
     var body: some View {
         NavigationStack {
             List {
+                if AutoBackup.shared.needsAttention { Section { BackupBanner() } }
                 Section {
                     let n = net
                     HStack(alignment: .top) {

@@ -12,6 +12,8 @@ struct AddBankSMSIntent: AppIntent {
 
     @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
         let outcome = SMSImporter.importText(text, ctx: AppStore.container.mainContext, rates: AppStore.rates)
+        // Команда может закончиться раньше паузы перед пересчётом, поэтому обновляем вечернюю сводку сразу.
+        if case .added = outcome { await EveningNotifier.shared.scheduleNow() }
         let message: String
         switch outcome {
         case .added: message = String(localized: "intent.addSMS.added")
