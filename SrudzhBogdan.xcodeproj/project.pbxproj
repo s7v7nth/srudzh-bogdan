@@ -42,6 +42,8 @@
 		A12C588C0EFB5D9FA1C67304 /* OnbSummaryStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 631052F70952E945E12A9A2E /* OnbSummaryStep.swift */; };
 		A862D69E51E678502F0920DD /* OnbCategoriesStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5445C12652777479C5DE14 /* OnbCategoriesStep.swift */; };
 		A9ECCB9544F32E1A04AEF702 /* BudgetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 840F9E96F25D3B26B48D4F56 /* BudgetsView.swift */; };
+		ABF5FA30D8A76343DA7EBDE2 /* ImportStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C5F964276E72BFE4ABEB12 /* ImportStyle.swift */; };
+		B505928B180C5176DE2A80CB /* OnbImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D61E38F37A4A91CC3C65B10 /* OnbImportSheet.swift */; };
 		BC40E0321B7EB70701AEE107 /* BreakdownReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D2B4EC7804F263B1BB43FD /* BreakdownReport.swift */; };
 		BD4AF336DF79A2F82F8CD785 /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DD58E1BBB838ACC99D9B814C /* Manrope-SemiBold.ttf */; };
 		C55082B9FAF7991EF3819C15 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9848C314B59188CBC776409 /* ReportsView.swift */; };
@@ -68,11 +70,13 @@
 		0DE49C5F87E4C13A20CE213E /* Manrope-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Bold.ttf"; sourceTree = "<group>"; };
 		116762DDB3717726FF052BA5 /* OnbBudgetStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbBudgetStep.swift; sourceTree = "<group>"; };
 		18494931F0654057D89E11B7 /* rates-seed.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "rates-seed.json"; sourceTree = "<group>"; };
+		1D61E38F37A4A91CC3C65B10 /* OnbImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbImportSheet.swift; sourceTree = "<group>"; };
 		1DD494458B2437F46296E69E /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		1EB149F315CE7E75045F008F /* BynSign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BynSign.swift; sourceTree = "<group>"; };
 		2ABC24B25DDA3CD2B7922F81 /* ReportData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportData.swift; sourceTree = "<group>"; };
 		2BE0BBF4776D0237C7ED6692 /* NetWorthReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetWorthReport.swift; sourceTree = "<group>"; };
 		3722539025B0D4D95AB3C712 /* SMSViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMSViews.swift; sourceTree = "<group>"; };
+		37C5F964276E72BFE4ABEB12 /* ImportStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportStyle.swift; sourceTree = "<group>"; };
 		3C5445C12652777479C5DE14 /* OnbCategoriesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbCategoriesStep.swift; sourceTree = "<group>"; };
 		3E99F2698CEFADCD0A44C2D3 /* AccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsView.swift; sourceTree = "<group>"; };
 		40560DB3DF4FDD56533053CE /* Scheduling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scheduling.swift; sourceTree = "<group>"; };
@@ -191,6 +195,7 @@
 				6917E5981413DB7B417666E9 /* Currencies.swift */,
 				A3960D8506A9E562BEB020BD /* DemoData.swift */,
 				BD6D434917266A6E854F1C29 /* Helpers.swift */,
+				37C5F964276E72BFE4ABEB12 /* ImportStyle.swift */,
 				B008CDE08E8F0EF95A3F1BA4 /* Models.swift */,
 				D94FC50C79D6050C70AD264B /* MoneyText.swift */,
 				08C156CADCD98F8D04E0926A /* RatesStore.swift */,
@@ -226,6 +231,7 @@
 			children = (
 				116762DDB3717726FF052BA5 /* OnbBudgetStep.swift */,
 				3C5445C12652777479C5DE14 /* OnbCategoriesStep.swift */,
+				1D61E38F37A4A91CC3C65B10 /* OnbImportSheet.swift */,
 				F8ED851E01F794E89544B79A /* OnbKeyboardTools.swift */,
 				F318EFE178FC0DBDC4F7D91E /* OnboardingCatalog.swift */,
 				8BE73190C4AAD9D876C774E8 /* OnboardingCommit.swift */,
@@ -356,12 +362,14 @@
 				64165A867A5F834F3505CBA1 /* ForecastReport.swift in Sources */,
 				094288527585C51C98E20042 /* HabitsReports.swift in Sources */,
 				F2AE89392B15A22B3A1BD3F8 /* Helpers.swift in Sources */,
+				ABF5FA30D8A76343DA7EBDE2 /* ImportStyle.swift in Sources */,
 				E899911395385D782F1AB4C1 /* IncomeExpenseReport.swift in Sources */,
 				675EC1AA2DFF5EA48B618BB4 /* Models.swift in Sources */,
 				E569D6060D1F73D5B7DB4B62 /* MoneyText.swift in Sources */,
 				F072D2F6659F8F6CDF5546D1 /* NetWorthReport.swift in Sources */,
 				44749C1A9D954E2C4F84989E /* OnbBudgetStep.swift in Sources */,
 				A862D69E51E678502F0920DD /* OnbCategoriesStep.swift in Sources */,
+				B505928B180C5176DE2A80CB /* OnbImportSheet.swift in Sources */,
 				EF287645F5BDCD847A1505B0 /* OnbKeyboardTools.swift in Sources */,
 				D8B965E4CC7CCB5A68824113 /* OnbPaymentsStep.swift in Sources */,
 				A12C588C0EFB5D9FA1C67304 /* OnbSummaryStep.swift in Sources */,

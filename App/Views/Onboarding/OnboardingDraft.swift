@@ -100,6 +100,13 @@ struct CategoryDraft: Identifiable {
     var incomeOverride: Decimal?
     private var budgetsReady = false
 
+    /// Данные, загруженные из CSV: счета, категории и операции. nil: человек настраивает всё вручную.
+    var imported: CSVLedger?
+    /// Ключ счёта из файла → его черновик.
+    var importedAccountIDs: [String: UUID] = [:]
+    @ObservationIgnored private var manualAccounts: [AccountDraft] = []
+    @ObservationIgnored private var manualCategories: [CategoryDraft] = []
+
     init(currency: String) {
         self.currency = currency
         accounts = [
@@ -115,6 +122,57 @@ struct CategoryDraft: Identifiable {
             CategoryDraft(key: $0.key, name: String(localized: String.LocalizationValue($0.key)), icon: $0.icon, color: $0.color,
                           group: $0.group, weight: $0.weight, level: $0.level, enabled: $0.level <= 2)
         }
+        manualAccounts = accounts
+        manualCategories = categories
+    }
+
+    // MARK: Импорт из CSV
+
+    /// Подставляет счета, категории и бюджеты из файла вместо вопросов онбординга. Остаток на счёте это остаток до первой операции.
+    func applyImport(_ ledger: CSVLedger) {
+        imported = ledger
+        if !ledger.baseCurrency.isEmpty { currency = ledger.baseCurrency }
+        accounts = ledger.accounts.map { a in
+            let kind: AccountKind = switch a.hint { case .cash: .cash; case .savings: .savings; case .card: .card }
+            var d = AccountDraft(kind: kind, name: a.name, currency: a.currency.isEmpty ? currency : a.currency, enabled: true)
+            d.balanceText = a.opening == 0 ? "" : "\(a.opening)"
+            return d
+        }
+        // Средний доход за месяц по истории: на него опираются бюджеты и итоговый экран.
+        if let first = ledger.firstDate, let last = ledger.lastDate {
+            let earned = ledger.entries.filter { $0.kind == .income && ($0.currency.isEmpty || $0.currency == currency) }
+                .reduce(Decimal(0)) { $0 + $1.amount }
+            let days = max(30, Calendar.current.dateComponents([.day], from: first, to: last).day ?? 30)
+            incomeOverride = earned > 0 ? Money.round(earned / (Decimal(days) / Decimal(string: "30.4")!)) : nil
+        }
+        importedAccountIDs = Dictionary(uniqueKeysWithValues: zip(ledger.accounts.map(\.key), accounts.map(\.id)))
+        let spent = ledger.expenseCategories.reduce(Decimal(0)) { $0 + $1.total }
+        categories = ledger.expenseCategories.enumerated().map { i, c in
+            let share = spent > 0 ? NSDecimalNumber(decimal: c.total / spent * 100).intValue : 1
+            return CategoryDraft(key: "imp.\(c.key)", name: c.name, icon: ImportStyle.symbol(icon: c.icon, name: c.name),
+                                 color: ImportStyle.color(index: i), group: ImportStyle.isNeed(c.name) ? .needs : .wants,
+                                 weight: max(1, share), level: 1, enabled: true, isCustom: true)
+        }
+        // Бюджеты, которые человек уже задал в прежнем приложении, переносим как есть.
+        var prefilled: [UUID: Decimal] = [:]
+        for (c, d) in zip(ledger.expenseCategories, categories) { if let b = c.budget { prefilled[d.id] = b } }
+        if !prefilled.isEmpty {
+            template = nil
+            amounts = prefilled
+            for c in categories where amounts[c.id] == nil { amounts[c.id] = 0 }
+            budgetsReady = true
+        }
+    }
+
+    func clearImport() {
+        imported = nil
+        importedAccountIDs = [:]
+        accounts = manualAccounts.map { var a = $0; a.currency = currency; return a }
+        categories = manualCategories
+        template = BudgetSplit.templates[0].id
+        incomeOverride = nil
+        amounts = [:]
+        budgetsReady = false
     }
 
     // MARK: Счета

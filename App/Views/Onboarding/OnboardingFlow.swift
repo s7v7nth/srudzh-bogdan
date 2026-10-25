@@ -24,6 +24,11 @@ struct OnboardingFlow: View {
         #if DEBUG
         let args = CommandLine.arguments
         if args.contains("-onbDemo") { d.applyDemo() }
+        // -onbCSV <путь>: сразу загрузить файл, как будто его выбрали на первом экране.
+        if let i = args.firstIndex(of: "-onbCSV"), i + 1 < args.count {
+            let m = CSVImportModel()
+            if m.load(.success(URL(fileURLWithPath: args[i + 1]))) { d.applyImport(m.ledger) }
+        }
         if let i = args.firstIndex(of: "-onbStep"), i + 1 < args.count, let n = Int(args[i + 1]), let s = OnbStep(rawValue: n) { _step = State(initialValue: s) }
         #endif
         _draft = State(initialValue: d)
@@ -32,6 +37,12 @@ struct OnboardingFlow: View {
     }
 
     private var isLast: Bool { step == .summary }
+
+    /// После загрузки CSV счета и категории уже известны, эти шаги пропускаются.
+    private var steps: [OnbStep] {
+        draft.imported == nil ? OnbStep.allCases : OnbStep.allCases.filter { $0 != .accounts && $0 != .categories }
+    }
+    private var stepNumber: Int { (steps.firstIndex(of: step) ?? 0) + 1 }
 
     /// Шаг пустой: человек ничего не заполнил, кнопка превращается в «Пропустить».
     private var isEmptyStep: Bool {
@@ -76,9 +87,9 @@ struct OnboardingFlow: View {
             Button { move(-1) } label: { Image(systemName: "chevron.left").font(.app(.headline)) }
                 .opacity(step == .welcome ? 0 : 1).disabled(step == .welcome)
                 .accessibilityLabel(Text("onb.back"))
-            ProgressView(value: Double(step.rawValue + 1), total: Double(OnbStep.allCases.count))
+            ProgressView(value: Double(stepNumber), total: Double(steps.count))
                 .progressViewStyle(CapsuleBar(tint: Theme.brand))
-            Text("\(step.rawValue + 1)/\(OnbStep.allCases.count)").font(.app(.caption).monospacedDigit()).foregroundStyle(.secondary)
+            Text("\(stepNumber)/\(steps.count)").font(.app(.caption).monospacedDigit()).foregroundStyle(.secondary)
             if isRerun {
                 Button(action: onFinish) { Image(systemName: "xmark").font(.app(.subheadline, .semibold)) }
                     .accessibilityLabel(Text("common.cancel"))
@@ -141,7 +152,8 @@ struct OnboardingFlow: View {
     }
 
     private func move(_ delta: Int) {
-        guard let next = OnbStep(rawValue: step.rawValue + delta) else { return }
+        guard let at = steps.firstIndex(of: step), steps.indices.contains(at + delta) else { return }
+        let next = steps[at + delta]
         goingForward = delta > 0
         withAnimation(.snappy(duration: 0.3)) { step = next }
     }
