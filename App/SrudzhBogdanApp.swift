@@ -34,6 +34,7 @@ struct SrudzhBogdanApp: App {
                 .font(.app(.body))
                 .tint(Theme.accent)
                 .environment(AppStore.rates)
+                .onAppear { AppLock.shared.attach() }
                 .task {
                     await AppStore.rates.refreshIfNeeded()
                 }

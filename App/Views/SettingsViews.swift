@@ -99,6 +99,7 @@ struct SettingsView: View {
                     }
                 }
                 EveningDigestSettingsSection()
+                AppLockSettingsSection()
                 Section {
                     LabeledContent("rates.updated") {
                         if let d = rates.lastUpdated { Text(d.formatted(date: .abbreviated, time: .shortened)) }

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		042F3BC2963AE7C23BFE8054 /* SrudzhBogdanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60E8C470CCCD2B09786570B6 /* SrudzhBogdanApp.swift */; };
+		081933910F4504A3FA44A711 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 3D5F996A753FC7D963DE894F /* InfoPlist.xcstrings */; };
 		094288527585C51C98E20042 /* HabitsReports.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B1A832EBC2057F5A980213 /* HabitsReports.swift */; };
 		0A6EDF96A8BD4F47CDF2E89B /* SettingsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8ADE1D9A99662E7AFDDE7F7 /* SettingsViews.swift */; };
 		14ADD3E93A6C89150A52D16F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F27D45C17596538634C10AD6 /* Assets.xcassets */; };
@@ -45,6 +46,7 @@
 		9A011AA9919F6D4E7F129822 /* RatesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08C156CADCD98F8D04E0926A /* RatesStore.swift */; };
 		9AE90A9EEDC94EA6A9B5E0D5 /* Scheduling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40560DB3DF4FDD56533053CE /* Scheduling.swift */; };
 		A12C588C0EFB5D9FA1C67304 /* OnbSummaryStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 631052F70952E945E12A9A2E /* OnbSummaryStep.swift */; };
+		A1FEE92111F703E0D3E7DC5E /* AppLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = E276533EE652F5D6E9FA334B /* AppLock.swift */; };
 		A862D69E51E678502F0920DD /* OnbCategoriesStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5445C12652777479C5DE14 /* OnbCategoriesStep.swift */; };
 		A9ECCB9544F32E1A04AEF702 /* BudgetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 840F9E96F25D3B26B48D4F56 /* BudgetsView.swift */; };
 		ABF5FA30D8A76343DA7EBDE2 /* ImportStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C5F964276E72BFE4ABEB12 /* ImportStyle.swift */; };
@@ -84,6 +86,7 @@
 		3722539025B0D4D95AB3C712 /* SMSViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMSViews.swift; sourceTree = "<group>"; };
 		37C5F964276E72BFE4ABEB12 /* ImportStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportStyle.swift; sourceTree = "<group>"; };
 		3C5445C12652777479C5DE14 /* OnbCategoriesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbCategoriesStep.swift; sourceTree = "<group>"; };
+		3D5F996A753FC7D963DE894F /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		3E99F2698CEFADCD0A44C2D3 /* AccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsView.swift; sourceTree = "<group>"; };
 		40560DB3DF4FDD56533053CE /* Scheduling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scheduling.swift; sourceTree = "<group>"; };
 		405FE2A9ABDA2CF43A888D72 /* AddTransactionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTransactionView.swift; sourceTree = "<group>"; };
@@ -117,6 +120,7 @@
 		D94FC50C79D6050C70AD264B /* MoneyText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyText.swift; sourceTree = "<group>"; };
 		DD58E1BBB838ACC99D9B814C /* Manrope-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-SemiBold.ttf"; sourceTree = "<group>"; };
 		DF08D6888758E47909331231 /* SMSIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMSIntent.swift; sourceTree = "<group>"; };
+		E276533EE652F5D6E9FA334B /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
 		E4A4AD1D8AE5B9CB4877C52A /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		E9E3FBE61BF7FB8C7E720735 /* ScheduledView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledView.swift; sourceTree = "<group>"; };
 		EB851F66817DE013E1DB0F36 /* OnboardingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlow.swift; sourceTree = "<group>"; };
@@ -163,6 +167,7 @@
 			isa = PBXGroup;
 			children = (
 				F27D45C17596538634C10AD6 /* Assets.xcassets */,
+				3D5F996A753FC7D963DE894F /* InfoPlist.xcstrings */,
 				1DD494458B2437F46296E69E /* Localizable.xcstrings */,
 				6A182B7A1C5DB1BFB1B14653 /* RootView.swift */,
 				60E8C470CCCD2B09786570B6 /* SrudzhBogdanApp.swift */,
@@ -201,6 +206,7 @@
 		B9B303EBAA27F031CAD5E0F0 /* Support */ = {
 			isa = PBXGroup;
 			children = (
+				E276533EE652F5D6E9FA334B /* AppLock.swift */,
 				EBD13BAF44A7D1F74C6BA408 /* AutoBackup.swift */,
 				945B4964B058A1FC2B096C57 /* BackupSnapshot.swift */,
 				1EB149F315CE7E75045F008F /* BynSign.swift */,
@@ -344,6 +350,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				14ADD3E93A6C89150A52D16F /* Assets.xcassets in Resources */,
+				081933910F4504A3FA44A711 /* InfoPlist.xcstrings in Resources */,
 				7BF1E750FF88633E776E419B /* Localizable.xcstrings in Resources */,
 				2BCB172713F9BA684B5AEBF7 /* Manrope-Bold.ttf in Resources */,
 				21CA67C27CEF96A0561C40CA /* Manrope-ExtraBold.ttf in Resources */,
@@ -364,6 +371,7 @@
 				89A527B75EF2E1CCE68665D9 /* AccountsView.swift in Sources */,
 				549BEDBF54FCC5F9A12F0420 /* ActivityView.swift in Sources */,
 				20BFFAA81A478D4EA9034C0E /* AddTransactionView.swift in Sources */,
+				A1FEE92111F703E0D3E7DC5E /* AppLock.swift in Sources */,
 				28E018059A9B63E7274EB217 /* AutoBackup.swift in Sources */,
 				4DDCB5EB55DFF6A64BB9528B /* BackupSnapshot.swift in Sources */,
 				52AC6D24932ECAA518D48A10 /* BackupViews.swift in Sources */,
@@ -425,6 +433,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Срудж Богдан";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID keeps your finances away from prying eyes.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -511,6 +520,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Срудж Богдан";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID keeps your finances away from prying eyes.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
