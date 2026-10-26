@@ -29,7 +29,8 @@ import LedgerCore
     /// В базе есть изменения, которые ещё не попали в копию.
     private(set) var dirty: Bool { didSet { ud.set(dirty, forKey: Keys.dirty) } }
 
-    var hasFolder: Bool { ud.data(forKey: Keys.bookmark) != nil }
+    /// Хранится отдельным свойством, а не читается из настроек на лету: иначе экраны не узнают, что папку только что выбрали.
+    private(set) var hasFolder: Bool
 
     /// Плашка на главном экране: копии не настроены, не пишутся или давно не обновлялись.
     var needsAttention: Bool {
@@ -59,6 +60,7 @@ import LedgerCore
         dirty = ud.bool(forKey: Keys.dirty)
         lastSuccess = ud.object(forKey: Keys.last) as? Date
         folderTitle = ud.string(forKey: Keys.title)
+        hasFolder = ud.data(forKey: Keys.bookmark) != nil
     }
 
     /// Подключается к базе: каждое сохранение помечает данные изменёнными и откладывает копию.
@@ -106,6 +108,7 @@ import LedgerCore
         let bookmark = try url.bookmarkData(options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil)
         let own = url.lastPathComponent == Self.folderName || !Self.scan(url).isEmpty
         ud.set(bookmark, forKey: Keys.bookmark)
+        hasFolder = true
         ud.set(own ? "" : Self.folderName, forKey: Keys.sub)
         let title = own ? url.lastPathComponent : "\(url.lastPathComponent)/\(Self.folderName)"
         ud.set(title, forKey: Keys.title)

@@ -96,6 +96,8 @@ struct BackupPromptSheet: View {
             .padding(20)
         }
         .background(Theme.bg.ignoresSafeArea())
+        // Папку выбрали: окно больше не нужно.
+        .onChange(of: backup.hasFolder) { if backup.hasFolder { dismiss() } }
     }
 }
 
