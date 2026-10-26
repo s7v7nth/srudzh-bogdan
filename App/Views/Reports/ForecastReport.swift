@@ -95,5 +95,6 @@ struct ForecastReport: View {
         }
         .chartYAxis { AxisMarks(position: .trailing) { v in AxisGridLine().foregroundStyle(.white.opacity(0.06)); AxisValueLabel { if let d = v.as(Double.self) { Text(Decimal(d).compact).font(.app(.caption2)) } } } }
         .chartXAxis { AxisMarks(values: .automatic(desiredCount: 5)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)).font(.app(.caption2)) } }
+        .chartReveal(trigger: weeks)
     }
 }

@@ -83,6 +83,7 @@ struct BudgetsReport: View {
                 .chartYAxis { AxisMarks(position: .trailing, values: [0, 1]) { v in AxisValueLabel { if let d = v.as(Double.self) { Text(d == 0 ? "0" : "100%").font(.app(.caption2)) } } } }
                 .chartXAxis { AxisMarks(values: .stride(by: .month)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)).font(.app(.caption2)) } }
                 .frame(height: 110)
+                .chartReveal()
             } else if let only = r.results.first {
                 ProgressView(value: min(only.ratio, 1)).progressViewStyle(CapsuleBar(tint: only.over ? Theme.expense : Theme.income))
                 HStack(spacing: 4) { MoneyText(amount: only.spent, code: r.currency); Text("budgets.of"); MoneyText(amount: only.limit, code: r.currency) }

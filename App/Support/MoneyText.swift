@@ -17,8 +17,10 @@ struct MoneyText: View {
     private var content: some View {
         HStack(spacing: 3) {
             Text(Self.number(amount, code: code, signed: signed)).monospacedDigit(tabular)
+                .contentTransition(.numericText(value: NSDecimalNumber(decimal: amount).doubleValue))
             CurrencySymbolView(code: code, weight: weight)
         }
+        .animation(.snappy, value: amount)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(Self.number(amount, code: code, signed: signed)) \(Self.spoken(code))"))
     }

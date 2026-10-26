@@ -38,6 +38,7 @@ struct BreakdownReport: View {
                                 SectorMark(angle: .value("v", s.amount.asDouble), innerRadius: .ratio(0.64), angularInset: 1.5)
                                     .cornerRadius(4).foregroundStyle(color(i, s))
                             }
+                            .donutReveal(trigger: dim)
                             VStack(spacing: 2) {
                                 Text(sign < 0 ? "rep.bd.spent" : "rep.bd.earned").font(.app(.caption)).foregroundStyle(.secondary)
                                 MoneyText(amount: total, code: data.base, tabular: false, weight: .heavy).font(.app(.title3, .heavy))

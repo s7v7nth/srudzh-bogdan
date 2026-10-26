@@ -42,6 +42,7 @@ struct ActivityView: View {
             }
         }
         .contentMargins(.bottom, 90, for: .scrollContent)
+        .animation(.snappy, value: filtered.map(\.persistentModelID))
         .searchable(text: $search, prompt: Text("activity.search"))
         .themedScreen()
         .navigationTitle(account?.name ?? String(localized: "tab.activity"))
@@ -61,7 +62,7 @@ struct ActivityView: View {
         let tint = type?.tint ?? Theme.accent
         return Button { typeFilter = on && type != nil ? nil : type } label: {
             HStack(spacing: 5) {
-                if let type { Image(systemName: type.glyph).font(.app(.caption, .bold)) }
+                if let type { Image(systemName: type.glyph).font(.app(.caption, .bold)).symbolEffect(.bounce, value: on) }
                 if let type { Text(type.label) } else { Text("filter.all") }
             }
             .font(.app(.subheadline, .semibold)).padding(.horizontal, 12).frame(height: 34)

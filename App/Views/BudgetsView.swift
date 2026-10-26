@@ -33,10 +33,13 @@ struct BudgetsView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Image(systemName: state.icon).foregroundStyle(state.tint)
+                        .contentTransition(.symbolEffect(.replace))
+                        .symbolEffect(.bounce, value: state)
                     Text(b.name).font(.app(.headline)); Spacer()
                     MoneyText(amount: r.remaining, code: r.currency, color: state == .ok ? nil : state.tint).fontWeight(.semibold)
                 }
                 ProgressView(value: min(r.ratio, 1)).progressViewStyle(CapsuleBar(tint: state.tint))
+                    .modifier(NudgeOnAppear(active: state == .over))
                 HStack(spacing: 4) {
                     Text("budgets.spent"); MoneyText(amount: r.spent, code: r.currency)
                     Text("budgets.of"); MoneyText(amount: r.limit, code: r.currency)

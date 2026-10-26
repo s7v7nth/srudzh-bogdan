@@ -74,6 +74,7 @@ struct WeekdayReport: View {
                         .chartXAxis { AxisMarks { _ in AxisValueLabel().font(.app(.caption2)) } }
                         .chartYAxis { AxisMarks(position: .trailing) { v in AxisGridLine().foregroundStyle(.white.opacity(0.06)); AxisValueLabel { if let d = v.as(Double.self) { Text(Decimal(d).compact).font(.app(.caption2)) } } } }
                         .frame(height: 200)
+                        .chartReveal()
                     }
                 }
             }.padding(.horizontal, 16).padding(.bottom, 110)

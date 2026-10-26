@@ -21,6 +21,7 @@ struct AddTransactionView: View {
     @State private var pending = false
     @State private var submitted = false
     @State private var errorTick = 0
+    @State private var saved = false
 
     /// Редактируемая операция (nil — создаём новую). У перевода две половинки: исходящая и входящая.
     private let outTx: LedgerTransaction?
@@ -117,12 +118,15 @@ struct AddTransactionView: View {
             .onChange(of: toAccount) { suggestReceived() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("common.cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("common.save", action: save) }
+                ToolbarItem(placement: .confirmationAction) { Button("common.save", action: save).disabled(saved) }
             }
             .overlay {
                 if accounts.isEmpty {
                     ContentUnavailableView("add.needAccount", systemImage: "creditcard", description: Text("add.needAccountHint")).background(.background)
                 }
+            }
+            .overlay {
+                if saved { SavedBadge(tint: type.tint).transition(.scale(scale: 0.5).combined(with: .opacity)) }
             }
         }
     }
@@ -157,11 +161,17 @@ struct AddTransactionView: View {
         for tx in created { ctx.insert(tx); rates.stamp(tx) }
         let day = date
         Task { await rates.stampHistorical(created, on: day) }
-        Haptics.success()
-        dismiss()
+        finish()
     }
 
     private func fail() { errorTick += 1; Haptics.error() }
+
+    /// Показывает галочку и закрывает окно, когда она успела подпрыгнуть.
+    private func finish() {
+        Haptics.success()
+        withAnimation(.spring(duration: 0.3, bounce: 0.4)) { saved = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { dismiss() }
+    }
 
     /// Правит операцию на месте; у перевода обновляются обе половинки.
     private func saveEdit(_ out: LedgerTransaction, amount: Decimal, account: Account) {
@@ -181,7 +191,6 @@ struct AddTransactionView: View {
         for tx in changed { tx.date = date; tx.notes = notes; tx.pending = pending; rates.stamp(tx) }
         let day = date
         Task { await rates.stampHistorical(changed, on: day) }
-        Haptics.success()
-        dismiss()
+        finish()
     }
 }

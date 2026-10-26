@@ -44,6 +44,7 @@ struct IncomeExpenseReport: View {
                     .frame(height: 200)
                     .chartYAxis { AxisMarks(position: .trailing) { v in AxisGridLine().foregroundStyle(.white.opacity(0.06)); AxisValueLabel { if let d = v.as(Double.self) { Text(Decimal(d).compact).font(.app(.caption2)) } } } }
                     .chartXAxis { AxisMarks(values: .stride(by: .month)) { _ in AxisValueLabel(format: ms.count <= 6 ? .dateTime.month(.abbreviated) : .dateTime.month(.narrow)).font(.app(.caption2)) } }
+                    .chartReveal()
                 }
                 if ms.count > 1 {
                     ReportCard(title: "rep.ie.average") {

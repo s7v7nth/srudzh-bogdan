@@ -162,14 +162,110 @@ extension View {
 struct CapsuleBar: ProgressViewStyle {
     let tint: Color
     func makeBody(configuration: Configuration) -> some View {
-        let v = configuration.fractionCompleted ?? 0
+        CapsuleFill(value: configuration.fractionCompleted ?? 0, tint: tint)
+    }
+}
+
+/// Полоса наполняется от нуля при появлении и плавно доезжает до нового значения при изменении.
+private struct CapsuleFill: View {
+    let value: Double
+    let tint: Color
+    @State private var shown = 0.0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
         GeometryReader { g in
             ZStack(alignment: .leading) {
                 Capsule().fill(Theme.raised)
-                Capsule().fill(tint).frame(width: max(g.size.height, g.size.width * v))
+                Capsule().fill(tint).frame(width: max(g.size.height, g.size.width * shown))
             }
         }
         .frame(maxWidth: .infinity).frame(height: 8)
+        .onAppear {
+            if reduceMotion { shown = value } else { withAnimation(.spring(duration: 0.8, bounce: 0.15).delay(0.1)) { shown = value } }
+        }
+        .onChange(of: value) { withAnimation(.snappy) { shown = value } }
+    }
+}
+
+/// Однократная тряска при появлении, если `active`: так выделяется превышенный бюджет.
+struct NudgeOnAppear: ViewModifier {
+    let active: Bool
+    @State private var phase: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content.modifier(ShakeEffect(animatableData: phase))
+            .onAppear {
+                guard active, !reduceMotion, phase == 0 else { return }
+                withAnimation(.linear(duration: 0.45).delay(0.8)) { phase = 1 }
+            }
+    }
+}
+
+/// График проявляется слева направо при открытии и заново при каждой смене `trigger` (период, разрез, горизонт).
+struct ChartReveal<T: Equatable>: ViewModifier {
+    let trigger: T
+    @State private var progress: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .mask(alignment: .leading) { GeometryReader { g in Rectangle().frame(width: g.size.width * progress) } }
+            .onAppear(perform: reveal)
+            .onChange(of: trigger) {
+                progress = 0
+                DispatchQueue.main.async(execute: reveal)
+            }
+    }
+
+    private func reveal() {
+        if reduceMotion { progress = 1 } else { withAnimation(.easeOut(duration: 0.8)) { progress = 1 } }
+    }
+}
+
+/// Кольцевая диаграмма раскручивается и вырастает из центра.
+struct DonutReveal<T: Equatable>: ViewModifier {
+    let trigger: T
+    @State private var progress: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(0.7 + 0.3 * progress)
+            .rotationEffect(.degrees(-90 * (1 - progress)))
+            .opacity(progress)
+            .onAppear(perform: reveal)
+            .onChange(of: trigger) {
+                progress = 0
+                DispatchQueue.main.async(execute: reveal)
+            }
+    }
+
+    private func reveal() {
+        if reduceMotion { progress = 1 } else { withAnimation(.spring(duration: 0.7, bounce: 0.2)) { progress = 1 } }
+    }
+}
+
+extension View {
+    func chartReveal<T: Equatable>(trigger: T = 0) -> some View { modifier(ChartReveal(trigger: trigger)) }
+    func donutReveal<T: Equatable>(trigger: T = 0) -> some View { modifier(DonutReveal(trigger: trigger)) }
+}
+
+/// Крупная галочка поверх формы после сохранения, перед закрытием окна.
+struct SavedBadge: View {
+    let tint: Color
+    @State private var bounce = false
+
+    var body: some View {
+        Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 76, weight: .bold))
+            .foregroundStyle(tint)
+            .symbolEffect(.bounce, value: bounce)
+            .padding(28)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28))
+            .onAppear { bounce = true }
+            .accessibilityHidden(true)
     }
 }
 

@@ -147,6 +147,7 @@ struct ReportsView: View {
                 }
                 .chartXAxis(.hidden).chartYAxis(.hidden).chartYScale(domain: .automatic(includesZero: false))
                 .frame(width: 120, height: 50)
+                .chartReveal(trigger: periodRaw)
             }
         }
     }
