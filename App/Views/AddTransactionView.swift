@@ -27,12 +27,14 @@ struct AddTransactionView: View {
     private let outTx: LedgerTransaction?
     private let inTx: LedgerTransaction?
     private var isEditing: Bool { outTx != nil }
+    /// Вызывается, когда операция сохранена (а не отменена): по нему «Хаос» запускает монетки.
+    private let onSaved: (() -> Void)?
 
     /// Открывает существующую операцию. Для перевода partner — вторая половинка.
     init(editing t: LedgerTransaction, partner: LedgerTransaction?) {
         let out = (t.type == .transfer && t.amount > 0 ? partner : nil) ?? t
         let inc: LedgerTransaction? = t.type == .transfer ? (out === t ? partner : t) : nil
-        outTx = out; inTx = inc
+        outTx = out; inTx = inc; onSaved = nil
         _type = State(initialValue: t.type)
         _amountText = State(initialValue: "\(abs(out.amount))")
         _receivedText = State(initialValue: inc.map { "\($0.amount)" } ?? "")
@@ -46,7 +48,9 @@ struct AddTransactionView: View {
         _pending = State(initialValue: out.pending)
     }
 
-    init(type: TxType = .expense, toAccount: Account? = nil, fromAccount: Account? = nil, category: Category? = nil) {
+    init(type: TxType = .expense, toAccount: Account? = nil, fromAccount: Account? = nil, category: Category? = nil,
+         onSaved: (() -> Void)? = nil) {
+        self.onSaved = onSaved
         _type = State(initialValue: type)
         _toAccount = State(initialValue: toAccount)
         _account = State(initialValue: fromAccount)
@@ -139,6 +143,8 @@ struct AddTransactionView: View {
     }
 
     private func save() {
+        // Пока показывается галочка, окно ещё открыто: повторное нажатие не должно создать вторую операцию.
+        guard !saved else { return }
         submitted = true
         guard let amount, let account else { fail(); return }
         if let outTx { saveEdit(outTx, amount: amount, account: account); return }
@@ -169,6 +175,7 @@ struct AddTransactionView: View {
     /// Показывает галочку и закрывает окно, когда она успела подпрыгнуть.
     private func finish() {
         Haptics.success()
+        onSaved?()
         withAnimation(.spring(duration: 0.3, bounce: 0.4)) { saved = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { dismiss() }
     }

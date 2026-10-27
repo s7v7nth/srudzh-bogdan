@@ -27,6 +27,13 @@ struct ChaosHomeView: View {
     @State private var showAll = false
     @State private var editingAccount: Account?
     @State private var editingCategory: Category?
+    /// Перетаскивание, которое открыло окно операции: после сохранения из источника в получателя летят монетки.
+    @State private var pendingDrop: (source: NodeID, target: NodeID)?
+    @State private var dropSaved = false
+    @State private var flight: CoinFlight?
+    /// Кольцо бюджета, пока летят монетки: держит старое значение и растёт с каждой упавшей монеткой.
+    @State private var ringHold: [UUID: Double] = [:]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let circle: CGFloat = 50
     private let nodeHeight: CGFloat = 98
@@ -91,9 +98,16 @@ struct ChaosHomeView: View {
             .sorted { $0.0 < $1.0 }
     }
 
+    private func budget(for c: Category) -> Budget? {
+        budgets.first(where: { $0.categories.contains { $0.uuid == c.uuid || $0.familyIDs.contains(c.uuid) } })
+    }
+
     private func progress(for c: Category, in cache: [PersistentIdentifier: BudgetProgress]) -> BudgetProgress? {
-        guard let b = budgets.first(where: { $0.categories.contains { $0.uuid == c.uuid || $0.familyIDs.contains(c.uuid) } }) else { return nil }
-        return cache[b.persistentModelID]
+        budget(for: c).flatMap { cache[$0.persistentModelID] }
+    }
+
+    private func budgetRatio(of c: Category) -> Double? {
+        budget(for: c).flatMap { BudgetProgress.make($0, transactions: transactions, rates: rates)?.ratio }
     }
 
     /// Платежи по расписанию, которые пора провести: просроченные и те, что попадают в выбранный период.
@@ -141,6 +155,11 @@ struct ChaosHomeView: View {
             .coordinateSpace(name: space)
             .onPreferenceChange(FramesKey.self) { frames = $0 }
             .overlay(alignment: .topLeading) { ghost }
+            .overlay(alignment: .topLeading) {
+                if let f = flight {
+                    CoinShower(flight: f, onLand: coinLanded).id(f.id).allowsHitTesting(false)
+                }
+            }
             .background(LongPressDragHost(
                 enabled: isVisible && request == nil && !showSettings && !showNewAccount && newCategory == nil
                     && editingAccount == nil && editingCategory == nil,
@@ -156,8 +175,8 @@ struct ChaosHomeView: View {
             .onAppear { isVisible = true }
             .onDisappear { isVisible = false }
             .navigationBarHidden(true)
-            .sheet(item: $request) { r in
-                AddTransactionView(type: r.type, toAccount: r.to, fromAccount: r.from, category: r.category)
+            .sheet(item: $request, onDismiss: launchCoins) { r in
+                AddTransactionView(type: r.type, toAccount: r.to, fromAccount: r.from, category: r.category) { dropSaved = true }
             }
             .sheet(isPresented: $showSettings) { SettingsView() }
             .sheet(isPresented: $showNewAccount) { AccountFormView(nextSort: accounts.count) }
@@ -404,12 +423,12 @@ struct ChaosHomeView: View {
     private func expenseNode(_ c: Category, _ totals: [UUID: Decimal], _ cache: [PersistentIdentifier: BudgetProgress]) -> some View {
         let p = progress(for: c, in: cache)
         return node(.category(c.uuid), title: c.name, icon: c.icon, color: ChaosPalette.expense, text: ChaosPalette.expenseText,
-                    amount: totals[c.uuid] ?? 0, code: rates.base, progress: p, hidden: c.hiddenOnHome)
+                    amount: totals[c.uuid] ?? 0, code: rates.base, progress: p, ring: ringHold[c.uuid], hidden: c.hiddenOnHome)
     }
 
     @ViewBuilder
     private func node(_ id: NodeID, title: String, icon: String, color: Color, text: Color,
-                      amount: Decimal, code: String, progress: BudgetProgress? = nil, hidden: Bool) -> some View {
+                      amount: Decimal, code: String, progress: BudgetProgress? = nil, ring: Double? = nil, hidden: Bool) -> some View {
         let zero = amount == 0
         let alert = progress.map { $0.state != .ok } ?? false
         let valueColor: Color = amount < 0 ? TxType.expense.tint : (alert ? progress!.state.tint : text)
@@ -419,7 +438,7 @@ struct ChaosHomeView: View {
         VStack(spacing: 3) {
             Text(title).font(.app(.caption)).foregroundStyle(ChaosPalette.label).lineLimit(1).minimumScaleFactor(0.8)
                 .frame(height: 15)
-            bubble(icon: icon, color: color, progress: progress)
+            bubble(icon: icon, color: color, progress: progress, ring: ring)
                 .opacity(zero && progress == nil ? 0.7 : 1)
                 .scaleEffect(isHover ? 1.2 : (isSource ? 0.9 : 1))
                 .overlay { if isHover { Circle().stroke(color, lineWidth: 3).frame(width: circle + 12, height: circle + 12).scaleEffect(1.2).blur(radius: 1) } }
@@ -450,13 +469,15 @@ struct ChaosHomeView: View {
         .buttonStyle(.plain).offset(x: -2, y: -2)
     }
 
-    private func bubble(icon: String, color: Color, progress: BudgetProgress?) -> some View {
+    /// `held` подменяет долю бюджета, пока в кружок летят монетки.
+    private func bubble(icon: String, color: Color, progress: BudgetProgress?, ring held: Double? = nil) -> some View {
         let ring = circle + 12
         return ZStack {
             if let p = progress {
+                let ratio = held ?? p.ratio
                 Circle().stroke(Color.gray.opacity(0.2), lineWidth: 4).frame(width: ring, height: ring)
-                Circle().trim(from: 0, to: CGFloat(min(max(p.ratio, 0.02), 1)))
-                    .stroke(p.state.tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                Circle().trim(from: 0, to: CGFloat(min(max(ratio, 0.02), 1)))
+                    .stroke(BudgetState(ratio: ratio).tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                     .rotationEffect(.degrees(-90)).frame(width: ring, height: ring)
             }
             Color.clear.frame(width: circle, height: circle)
@@ -524,7 +545,52 @@ struct ChaosHomeView: View {
 
     private func drop(_ source: NodeID, at finger: CGPoint) {
         guard let t = target(at: finger, excluding: source) else { return }
-        if editing { reorder(source, onto: t) } else { request = self.request(from: source, to: t) }
+        if editing { reorder(source, onto: t); return }
+        request = self.request(from: source, to: t)
+        guard request != nil else { return }
+        pendingDrop = (source, t)
+        dropSaved = false
+        if let c = category(t), let r = budgetRatio(of: c) { ringHold[c.uuid] = r }
+    }
+
+    // MARK: Монетки
+
+    /// Центр кружка внутри ячейки: под подписью высотой 15 и отступом 3.
+    private func bubbleCenter(_ id: NodeID) -> CGPoint? {
+        frames[id].map { CGPoint(x: $0.midX, y: $0.minY + 18 + (circle + 12) / 2) }
+    }
+
+    /// Окно операции закрылось: если сохранили, запускаем монетки, если отменили, возвращаем кольцо как было.
+    private func launchCoins() {
+        guard let d = pendingDrop else { return }
+        pendingDrop = nil
+        let saved = dropSaved
+        dropSaved = false
+        let held = category(d.target).flatMap { c in ringHold[c.uuid].map { (c, $0) } }
+        guard saved, let from = bubbleCenter(d.source), let to = bubbleCenter(d.target) else {
+            if let (c, _) = held { ringHold[c.uuid] = nil }
+            return
+        }
+        let end = held.flatMap { budgetRatio(of: $0.0) }
+        if reduceMotion {
+            if let (c, _) = held { withAnimation(.snappy) { ringHold[c.uuid] = nil } }
+            return
+        }
+        flight = CoinFlight(from: from, to: to, count: 9, category: held?.0.uuid, start: held?.1 ?? 0, end: end ?? 0)
+    }
+
+    /// Монетка долетела: кольцо получателя подрастает на свою долю, последняя монетка отпускает кольцо.
+    private func coinLanded(_ index: Int) {
+        guard let f = flight else { return }
+        Haptics.coin()
+        if let u = f.category {
+            let k = Double(index + 1) / Double(f.count)
+            withAnimation(.snappy(duration: 0.2)) { ringHold[u] = f.start + (f.end - f.start) * k }
+        }
+        if index == f.count - 1 {
+            if let u = f.category { ringHold[u] = nil }
+            flight = nil
+        }
     }
 
     /// Ставит `source` на место `target`, остальные сдвигаются.
@@ -730,5 +796,86 @@ private struct JiggleEffect: ViewModifier {
                 value: swing
             )
             .onChange(of: active, initial: true) { _, on in swing = on }
+    }
+}
+
+// MARK: Монетки между кружками
+
+struct CoinFlight: Identifiable {
+    let id = UUID()
+    let from: CGPoint
+    let to: CGPoint
+    let count: Int
+    /// Категория с бюджетом, чьё кольцо растёт от `start` до `end` по мере падения монеток.
+    let category: UUID?
+    let start: Double
+    let end: Double
+}
+
+/// Горсть монеток: вылетают из кружка-источника по очереди и дугой падают в получателя.
+private struct CoinShower: View {
+    let flight: CoinFlight
+    let onLand: (Int) -> Void
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<flight.count, id: \.self) { i in
+                Coin(from: flight.from, to: flight.to,
+                     bend: CGFloat.random(in: -40...40), lift: CGFloat.random(in: 70...120),
+                     delay: Double(i) * 0.07, spin: Double.random(in: 360...720)) { onLand(i) }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct Coin: View {
+    let from: CGPoint
+    let to: CGPoint
+    let bend: CGFloat
+    let lift: CGFloat
+    let delay: Double
+    let spin: Double
+    let onLand: () -> Void
+    @State private var t: CGFloat = 0
+
+    var body: some View {
+        Circle()
+            .fill(LinearGradient(colors: [ChaosPalette.coinLight, ChaosPalette.coinDark], startPoint: .topLeading, endPoint: .bottomTrailing))
+            .overlay(Circle().strokeBorder(ChaosPalette.coinRim, lineWidth: 1.5).padding(3))
+            .frame(width: 18, height: 18)
+            .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
+            .modifier(ArcFlight(t: t, from: from, to: to, bend: bend, lift: lift, spin: spin))
+            .onAppear {
+                withAnimation(.timingCurve(0.35, 0, 0.75, 1, duration: 0.6).delay(delay)) { t = 1 } completion: { onLand() }
+            }
+    }
+}
+
+/// Положение монетки на дуге (квадратичная кривая через точку над серединой пути), с переворотом и уменьшением в конце.
+private struct ArcFlight: ViewModifier, Animatable {
+    var t: CGFloat
+    let from: CGPoint
+    let to: CGPoint
+    let bend: CGFloat
+    let lift: CGFloat
+    let spin: Double
+
+    var animatableData: CGFloat {
+        get { t }
+        set { t = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        let c = CGPoint(x: (from.x + to.x) / 2 + bend, y: min(from.y, to.y) - lift)
+        let u = 1 - t
+        let p = CGPoint(x: u * u * from.x + 2 * u * t * c.x + t * t * to.x,
+                        y: u * u * from.y + 2 * u * t * c.y + t * t * to.y)
+        let scale = t < 0.15 ? 0.5 + t / 0.15 * 0.5 : (t > 0.8 ? 1 - (t - 0.8) / 0.2 * 0.5 : 1)
+        content
+            .rotation3DEffect(.degrees(spin * Double(t)), axis: (x: 0, y: 1, z: 0))
+            .scaleEffect(scale)
+            .opacity(t <= 0 || t >= 1 ? 0 : 1)
+            .position(p)
     }
 }

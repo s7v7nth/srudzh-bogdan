@@ -64,6 +64,10 @@ enum ChaosPalette {
     static let expenseText = Color(light: Color(red: 0.02, green: 0.40, blue: 0.26), dark: Color(red: 0.45, green: 0.92, blue: 0.72))
     /// Подписи на подложке: чуть темнее серого, чтобы держать контраст.
     static let label = Color.primary.opacity(0.72)
+    /// Монетка, летящая между кружками: золото и тёмный ободок.
+    static let coinLight = Color(red: 1.00, green: 0.88, blue: 0.38)
+    static let coinDark = Color(red: 0.86, green: 0.58, blue: 0.08)
+    static let coinRim = Color(red: 0.66, green: 0.42, blue: 0.02)
 
     /// Цветная подложка зоны: стеклу нужно, что преломлять. Бледная, чтобы не спорить с балансом.
     static func zone(_ tint: Color) -> some View {
@@ -347,4 +351,5 @@ enum Haptics {
     static func success() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
     static func error() { UINotificationFeedbackGenerator().notificationOccurred(.error) }
     static func delete() { UIImpactFeedbackGenerator(style: .heavy).impactOccurred() }
+    static func coin() { UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.7) }
 }
