@@ -68,7 +68,12 @@ fi
 OWNER_ID="com.timofei.srudzhbogdan"
 if [ -z "${BUNDLE_ID:-}" ]; then
   APPS_JSON="$(mktemp)"
-  xcrun devicectl device info apps --device "$DEVICE" --json-output "$APPS_JSON" >/dev/null 2>&1
+  # Без списка приложений не понять, какая версия уже стоит, и выбор имени наугад ставит вторую копию.
+  if ! xcrun devicectl device info apps --device "$DEVICE" --json-output "$APPS_JSON" >/dev/null 2>&1 \
+     || ! grep -q '"apps"' "$APPS_JSON" 2>/dev/null; then
+    rm -f "$APPS_JSON"
+    die "не удалось узнать, какие приложения стоят на телефоне. Разблокируй iPhone, держи экран включённым и запусти скрипт снова."
+  fi
   if grep -q "\"$OWNER_ID\"" "$APPS_JSON" 2>/dev/null; then
     BUNDLE_ID="$OWNER_ID"
   else

@@ -74,7 +74,8 @@ struct AddTransactionView: View {
                     .onChange(of: type) { if category?.isIncome != (type == .income) { category = nil } }
 
                 Section {
-                    AmountField(title: type == .transfer ? "transfer.sent" : "field.amount", text: $amountText, code: account?.currency ?? rates.base)
+                    AmountField(title: type == .transfer ? "transfer.sent" : "field.amount", text: $amountText, code: account?.currency ?? rates.base,
+                                autoFocus: !isEditing)
                         .foregroundStyle(type.tint)
                     if submitted && amount == nil { FormError("error.amount", tick: errorTick) }
                 }

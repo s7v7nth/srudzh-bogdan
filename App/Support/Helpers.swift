@@ -56,10 +56,21 @@ struct AmountField: View {
     let title: LocalizedStringKey
     @Binding var text: String
     let code: String
+    /// Сразу ставит курсор в поле и открывает клавиатуру: в новой операции первым делом вводят сумму.
+    var autoFocus = false
+    @FocusState private var focused: Bool
+
     var body: some View {
         HStack {
             TextField(title, text: $text).keyboardType(.decimalPad).font(.app(.title3).monospacedDigit())
+                .focused($focused)
             CurrencySymbolView(code: code).font(.app(.title3)).foregroundStyle(.secondary)
+        }
+        .task {
+            guard autoFocus else { return }
+            // Окно ещё выезжает: фокус, выставленный сразу, iOS игнорирует.
+            try? await Task.sleep(for: .milliseconds(450))
+            focused = true
         }
     }
 }
