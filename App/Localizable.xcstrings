@@ -10574,6 +10574,380 @@
           }
         }
       }
+    },
+    "kind.debt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Долг"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debt"
+          }
+        }
+      }
+    },
+    "accounts.debts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Долги"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debts"
+          }
+        }
+      }
+    },
+    "debt.closed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Закрытые долги"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Closed debts"
+          }
+        }
+      }
+    },
+    "debt.closedLabel": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Долг закрыт"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debt closed"
+          }
+        }
+      }
+    },
+    "debt.owedToMe": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мне должны"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Owed to me"
+          }
+        }
+      }
+    },
+    "debt.iOwe": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Я должен"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I owe"
+          }
+        }
+      }
+    },
+    "debt.direction": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Направление"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Direction"
+          }
+        }
+      }
+    },
+    "debt.amount": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сумма долга"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debt amount"
+          }
+        }
+      }
+    },
+    "debt.hasDue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Есть срок возврата"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Has a due date"
+          }
+        }
+      }
+    },
+    "debt.dueDate": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вернуть до"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due date"
+          }
+        }
+      }
+    },
+    "debt.fromAccount": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Деньги ушли со счёта"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paid from account"
+          }
+        }
+      }
+    },
+    "debt.toAccount": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Деньги пришли на счёт"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Received to account"
+          }
+        }
+      }
+    },
+    "debt.noAccount": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не связывать со счётом"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No account"
+          }
+        }
+      }
+    },
+    "debt.footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Если выбрать счёт, на нём появится перевод. Без счёта сумма просто запишется как долг, остальные счета не изменятся."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you pick an account, a transfer is recorded on it. Without one the amount is just saved as a debt and your other accounts stay untouched."
+          }
+        }
+      }
+    },
+    "debt.remaining": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Осталось вернуть"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left to repay"
+          }
+        }
+      }
+    },
+    "debt.principal": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сумма долга"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debt amount"
+          }
+        }
+      }
+    },
+    "debt.returned": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уже возвращено"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repaid so far"
+          }
+        }
+      }
+    },
+    "debt.repayTheirs": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мне вернули часть"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They paid back"
+          }
+        }
+      }
+    },
+    "debt.repayMine": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Я вернул часть"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I paid back"
+          }
+        }
+      }
+    },
+    "debt.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "срок сегодня"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "due today"
+          }
+        }
+      }
+    },
+    "debt.daysLeft": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "осталось %lld дн."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld days left"
+          }
+        }
+      }
+    },
+    "debt.overdue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "просрочено на %lld дн."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "overdue by %lld days"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -40,6 +40,7 @@
 		770CE0C504CC625644E896C5 /* SMSImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9058CC94FE0D09A4F16C987 /* SMSImporter.swift */; };
 		7BAD08BCF2CE24D8BAE5396C /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3960D8506A9E562BEB020BD /* DemoData.swift */; };
 		7BF1E750FF88633E776E419B /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 1DD494458B2437F46296E69E /* Localizable.xcstrings */; };
+		82C678A448177AB880FF0C3E /* DebtView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57820428B34AC89AEC520E29 /* DebtView.swift */; };
 		89A527B75EF2E1CCE68665D9 /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E99F2698CEFADCD0A44C2D3 /* AccountsView.swift */; };
 		8BDA2B76D4E2FA14103B3E5B /* LedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = 76AD14E3CB339D9439FB1985 /* LedgerCore */; };
 		949597662E974215927E150D /* ChaosHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0448F648CE708CDBDE04E747 /* ChaosHomeView.swift */; };
@@ -92,6 +93,7 @@
 		405FE2A9ABDA2CF43A888D72 /* AddTransactionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTransactionView.swift; sourceTree = "<group>"; };
 		4A17B6D2203E152A8B915F92 /* Manrope-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraBold.ttf"; sourceTree = "<group>"; };
 		52B1A832EBC2057F5A980213 /* HabitsReports.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabitsReports.swift; sourceTree = "<group>"; };
+		57820428B34AC89AEC520E29 /* DebtView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebtView.swift; sourceTree = "<group>"; };
 		57EF4DE0871B6EF1FD221720 /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
 		58316FB2419FCBF1EEE35F87 /* OnbPaymentsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbPaymentsStep.swift; sourceTree = "<group>"; };
 		60E8C470CCCD2B09786570B6 /* SrudzhBogdanApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SrudzhBogdanApp.swift; sourceTree = "<group>"; };
@@ -237,6 +239,7 @@
 				795ADB18664F19F979A3D887 /* CategoryViews.swift */,
 				0448F648CE708CDBDE04E747 /* ChaosHomeView.swift */,
 				BCB6E4A0AE5E47599BD66E84 /* CreditLineView.swift */,
+				57820428B34AC89AEC520E29 /* DebtView.swift */,
 				1EC1794F2968F62B6BFDE050 /* EveningViews.swift */,
 				E9E3FBE61BF7FB8C7E720735 /* ScheduledView.swift */,
 				F8ADE1D9A99662E7AFDDE7F7 /* SettingsViews.swift */,
@@ -384,6 +387,7 @@
 				D095A242A745AFEB1F2E0E5E /* CompareReport.swift in Sources */,
 				D605F3926D64410EA727AFEA /* CreditLineView.swift in Sources */,
 				6ADDD09C666485781E2E2AC0 /* Currencies.swift in Sources */,
+				82C678A448177AB880FF0C3E /* DebtView.swift in Sources */,
 				7BAD08BCF2CE24D8BAE5396C /* DemoData.swift in Sources */,
 				3092234840FF41145D9D95DC /* EveningNotifier.swift in Sources */,
 				461906825DA1596838CA0037 /* EveningViews.swift in Sources */,

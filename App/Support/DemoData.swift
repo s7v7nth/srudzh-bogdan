@@ -28,7 +28,11 @@ enum DemoData {
         credit.creditLimit = 2000; credit.interestRate = 24; credit.statementDay = 1
         credit.graceDays = 30; credit.graceFromStatement = true
         credit.minPercent = 5; credit.minFloor = 20; credit.dueDays = 20
-        [byn, usd, credit].forEach(ctx.insert)
+        let lent = Account(name: "Alex", currency: "BYN", kind: .debt, sortID: 3)
+        lent.debtOwedToMe = true; lent.debtPrincipal = 300; lent.debtDue = cal.date(byAdding: .day, value: 12, to: .now)
+        let owed = Account(name: "Sam", currency: "BYN", kind: .debt, sortID: 4)
+        owed.debtOwedToMe = false; owed.debtPrincipal = 150; owed.debtDue = cal.date(byAdding: .day, value: -3, to: .now)
+        [byn, usd, credit, lent, owed].forEach(ctx.insert)
 
         func add(_ amount: Decimal, _ type: TxType, _ acc: Account, day: Int, payee: String = "",
                  category: Category? = nil, transfer: UUID? = nil) {
@@ -43,6 +47,8 @@ enum DemoData {
         add(-300, .expense, credit, day: 45, payee: "Shop", category: cat("cart"))
         add(-250, .expense, credit, day: 12, payee: "Market", category: cat("cart"))
         add(-120, .expense, credit, day: 3, payee: "Pharmacy", category: cat("cross.case"))
+        add(300, .income, lent, day: 10, payee: "Opening balance")
+        add(-150, .expense, owed, day: 8, payee: "Opening balance")
         let repay = UUID()
         add(-100, .transfer, byn, day: 5, transfer: repay)
         add(100, .transfer, credit, day: 5, transfer: repay)

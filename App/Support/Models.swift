@@ -11,14 +11,14 @@ enum TxType: String, Codable, CaseIterable {
 }
 
 enum AccountKind: String, Codable, CaseIterable {
-    case card, cash, savings, creditLine
+    case card, cash, savings, creditLine, debt
     var label: LocalizedStringKey {
         switch self {
-        case .card: "kind.card"; case .cash: "kind.cash"; case .savings: "kind.savings"; case .creditLine: "kind.creditLine"
+        case .card: "kind.card"; case .cash: "kind.cash"; case .savings: "kind.savings"; case .creditLine: "kind.creditLine"; case .debt: "kind.debt"
         }
     }
     var icon: String {
-        switch self { case .card: "creditcard"; case .cash: "banknote"; case .savings: "building.columns"; case .creditLine: "creditcard.and.123" }
+        switch self { case .card: "creditcard"; case .cash: "banknote"; case .savings: "building.columns"; case .creditLine: "creditcard.and.123"; case .debt: "person.2" }
     }
 }
 
@@ -41,6 +41,11 @@ enum AccountKind: String, Codable, CaseIterable {
     var minPercent: Decimal?
     var minFloor: Decimal?
     var dueDays: Int?
+    // Долг: true, если должны мне (остаток положительный), false, если должен я (остаток отрицательный).
+    var debtOwedToMe: Bool = true
+    var debtDue: Date?
+    /// Исходная сумма долга, чтобы показывать, сколько уже возвращено.
+    var debtPrincipal: Decimal?
     @Relationship(deleteRule: .cascade, inverse: \LedgerTransaction.account)
     var transactions: [LedgerTransaction] = []
 
@@ -50,6 +55,7 @@ enum AccountKind: String, Codable, CaseIterable {
     }
 
     var isCredit: Bool { kind == .creditLine }
+    var isDebt: Bool { kind == .debt }
 
     var terms: CreditTerms {
         CreditTerms(limit: creditLimit ?? 0, aprPercent: interestRate ?? 0, statementDay: statementDay ?? 1,

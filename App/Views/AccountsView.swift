@@ -79,16 +79,13 @@ struct AccountsView: View {
                     if accounts.isEmpty {
                         ContentUnavailableView("accounts.empty", systemImage: "creditcard", description: Text("accounts.emptyHint"))
                     }
-                    ForEach(accounts) { a in
-                        NavigationLink {
-                            if a.isCredit { CreditLineView(account: a) } else { ActivityView(account: a) }
-                        } label: { row(a) }
-                        .contextMenu { Button("common.edit", systemImage: "pencil") { editing = a } }
-                        .swipeActions {
-                            Button("common.delete", role: .destructive) { toDelete = a }
-                            Button("common.edit") { editing = a }.tint(.blue)
-                        }
-                    }
+                    ForEach(accounts.filter { !$0.isDebt }) { a in accountLink(a) }
+                }
+                if !openDebts.isEmpty {
+                    Section("accounts.debts") { ForEach(openDebts) { a in accountLink(a) } }
+                }
+                if !closedDebts.isEmpty {
+                    Section("debt.closed") { ForEach(closedDebts) { a in accountLink(a) } }
                 }
             }
             .contentMargins(.bottom, 90, for: .scrollContent)
@@ -104,6 +101,24 @@ struct AccountsView: View {
             .confirmationDialog("account.deleteTitle", isPresented: Binding(get: { toDelete != nil }, set: { if !$0 { toDelete = nil } }), titleVisibility: .visible) {
                 Button("common.delete", role: .destructive) { if let a = toDelete { ctx.delete(a); Haptics.delete() }; toDelete = nil }
             } message: { Text("account.deleteMessage") }
+        }
+    }
+
+    private var openDebts: [Account] {
+        accounts.filter { $0.isDebt && !isClosed($0) }
+            .sorted { ($0.debtDue ?? .distantFuture) < ($1.debtDue ?? .distantFuture) }
+    }
+    private var closedDebts: [Account] { accounts.filter { $0.isDebt && isClosed($0) } }
+    private func isClosed(_ a: Account) -> Bool { !a.transactions.isEmpty && balance(of: a) == 0 }
+
+    @ViewBuilder private func accountLink(_ a: Account) -> some View {
+        NavigationLink {
+            if a.isCredit { CreditLineView(account: a) } else if a.isDebt { DebtView(account: a) } else { ActivityView(account: a) }
+        } label: { row(a) }
+        .contextMenu { Button("common.edit", systemImage: "pencil") { editing = a } }
+        .swipeActions {
+            Button("common.delete", role: .destructive) { toDelete = a }
+            Button("common.edit") { editing = a }.tint(.blue)
         }
     }
 
@@ -123,6 +138,8 @@ struct AccountsView: View {
                         MoneyText(amount: Balances.availableCredit(limit: a.creditLimit ?? 0, balance: b), code: a.currency)
                             .font(.app(.caption)).foregroundStyle(.secondary)
                     }
+                } else if a.isDebt {
+                    DebtDueLabel(account: a, closed: isClosed(a))
                 } else {
                     Text(a.kind.label).font(.app(.caption)).foregroundStyle(.secondary)
                 }
@@ -161,6 +178,11 @@ struct AccountFormView: View {
     @State private var minPercent = ""
     @State private var minFloor = ""
     @State private var dueDays = 20
+    @State private var owedToMe = true
+    @State private var hasDue = false
+    @State private var dueDate = Calendar.current.date(byAdding: .month, value: 1, to: .now) ?? .now
+    @State private var counter: Account?
+    @Query(sort: \Account.sortID) private var allAccounts: [Account]
     @State private var submitted = false
     @State private var errorTick = 0
     @State private var loaded = false
@@ -176,12 +198,28 @@ struct AccountFormView: View {
                     Picker("account.kind", selection: $kind) { ForEach(AccountKind.allCases, id: \.self) { Text($0.label).tag($0) } }
                     CurrencyPicker(title: "account.currency", code: $currency).disabled(hasTransactions)
                     if !isEditing {
-                        AmountField(title: kind == .creditLine ? "account.openingDebt" : "account.opening", text: $opening, code: currency)
+                        AmountField(title: kind == .creditLine ? "account.openingDebt" : (kind == .debt ? "debt.amount" : "account.opening"), text: $opening, code: currency)
                     }
                     Toggle("account.primary", isOn: $primary)
                     Toggle("account.excluded", isOn: $excluded)
                 } footer: { if hasTransactions { Text("account.currencyLocked") } }
                 if submitted && name.trimmingCharacters(in: .whitespaces).isEmpty { FormError("error.name", tick: errorTick) }
+
+                if kind == .debt {
+                    Section {
+                        Picker("debt.direction", selection: $owedToMe) {
+                            Text("debt.owedToMe").tag(true); Text("debt.iOwe").tag(false)
+                        }.pickerStyle(.segmented).disabled(hasTransactions)
+                        Toggle("debt.hasDue", isOn: $hasDue)
+                        if hasDue { DatePicker("debt.dueDate", selection: $dueDate, displayedComponents: .date) }
+                        if !isEditing {
+                            Picker(owedToMe ? "debt.fromAccount" : "debt.toAccount", selection: $counter) {
+                                Text("debt.noAccount").tag(Account?.none)
+                                ForEach(allAccounts.filter { !$0.isDebt && $0.currency == currency }) { Text($0.name).tag(Account?.some($0)) }
+                            }
+                        }
+                    } footer: { if !isEditing { Text("debt.footer") } }
+                }
 
                 if kind == .creditLine {
                     Section {
@@ -217,6 +255,7 @@ struct AccountFormView: View {
     private func load() {
         guard !loaded else { return }; loaded = true
         guard let a = account else { currency = rates.base; return }
+        owedToMe = a.debtOwedToMe; hasDue = a.debtDue != nil; dueDate = a.debtDue ?? dueDate
         name = a.name; kind = a.kind; currency = a.currency; excluded = a.excludedFromNetWorth; primary = a.isPrimary
         limit = a.creditLimit.map { "\($0)" } ?? ""; apr = a.interestRate.map { "\($0)" } ?? ""
         statementDay = a.statementDay ?? 1; dueDays = a.dueDays ?? 20
@@ -228,6 +267,7 @@ struct AccountFormView: View {
         submitted = true
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { fail(); return }
         if kind == .creditLine, (Decimal.parse(limit) ?? 0) <= 0 { fail(); return }
+        if kind == .debt, account == nil, (Decimal.parse(opening) ?? 0) == 0 { fail(); return }
         let a = account ?? Account(name: name, currency: currency, kind: kind, sortID: nextSort)
         a.name = name; a.kind = kind; a.excludedFromNetWorth = excluded; a.isPrimary = primary
         if !hasTransactions { a.currency = currency }
@@ -237,9 +277,24 @@ struct AccountFormView: View {
             a.graceDays = hasGrace ? graceDays : nil; a.graceFromStatement = graceFromStatement
             a.minPercent = Decimal.parse(minPercent); a.minFloor = Decimal.parse(minFloor)
         }
+        if kind == .debt {
+            a.debtOwedToMe = owedToMe; a.debtDue = hasDue ? dueDate : nil
+        }
         if account == nil {
             ctx.insert(a)
-            if let o = Decimal.parse(opening), o != 0 {
+            if kind == .debt, let o = Decimal.parse(opening), o != 0 {
+                let signed = owedToMe ? abs(o) : -abs(o)
+                a.debtPrincipal = abs(o)
+                if let counter {
+                    let id = UUID()
+                    let inTx = LedgerTransaction(amount: signed, type: .transfer, transferID: id, account: a)
+                    let outTx = LedgerTransaction(amount: -signed, type: .transfer, transferID: id, account: counter)
+                    ctx.insert(inTx); ctx.insert(outTx); rates.stamp(inTx); rates.stamp(outTx)
+                } else {
+                    let tx = LedgerTransaction(amount: signed, type: signed > 0 ? .income : .expense, payee: String(localized: "account.openingPayee"), account: a)
+                    ctx.insert(tx); rates.stamp(tx)
+                }
+            } else if let o = Decimal.parse(opening), o != 0 {
                 let signed = kind == .creditLine ? -abs(o) : o
                 let tx = LedgerTransaction(amount: signed, type: signed > 0 ? .income : .expense, payee: String(localized: "account.openingPayee"), account: a)
                 ctx.insert(tx); rates.stamp(tx)
