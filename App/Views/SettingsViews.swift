@@ -60,6 +60,7 @@ struct SettingsView: View {
     @Environment(RatesStore.self) private var rates
     @Environment(\.dismiss) private var dismiss
     @AppStorage(chaosModeKey) private var chaos = false
+    @AppStorage(goldRainKey) private var goldRain = true
     @AppStorage(scheduleWindowKey) private var windowDays = 7
     @State private var showOnboarding = false
     @State private var showReset = false
@@ -76,6 +77,13 @@ struct SettingsView: View {
                         }
                     }
                     if chaos {
+                        Toggle(isOn: $goldRain) {
+                            HStack(spacing: 10) {
+                                Image("GoldRain").resizable().scaledToFit().frame(width: 34, height: 34)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                Text("settings.goldRain")
+                            }
+                        }
                         Picker("settings.window", selection: $windowDays) {
                             ForEach(scheduleWindowOptions, id: \.self) { Text(fmt("settings.window.value", $0)).tag($0) }
                         }

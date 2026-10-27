@@ -5696,6 +5696,23 @@
         }
       }
     },
+    "settings.goldRain": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Golden rain"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Золотой дождь"
+          }
+        }
+      }
+    },
     "settings.chaosFooter": {
       "extractionState": "manual",
       "localizations": {

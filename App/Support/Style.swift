@@ -140,6 +140,8 @@ struct BudgetProgress {
 }
 
 let chaosModeKey = "chaosInterface"
+/// Монетки между кружками в «Хаосе» после сохранения операции.
+let goldRainKey = "goldRain"
 
 /// Значок категории с маленькой меткой типа операции (стрелка вниз, вверх) в углу.
 struct TxCategoryBadge: View {

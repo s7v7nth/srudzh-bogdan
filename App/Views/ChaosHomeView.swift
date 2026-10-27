@@ -15,6 +15,7 @@ struct ChaosHomeView: View {
     @Query private var transactions: [LedgerTransaction]
     @Query(sort: \RecurringTransaction.nextDate) private var recurring: [RecurringTransaction]
     @AppStorage(scheduleWindowKey) private var windowDays = 7
+    @AppStorage(goldRainKey) private var goldRain = true
 
     @State private var frames: [NodeID: CGRect] = [:]
     @State private var drag: (id: NodeID, point: CGPoint)?
@@ -572,7 +573,7 @@ struct ChaosHomeView: View {
             return
         }
         let end = held.flatMap { budgetRatio(of: $0.0) }
-        if reduceMotion {
+        if reduceMotion || !goldRain {
             if let (c, _) = held { withAnimation(.snappy) { ringHold[c.uuid] = nil } }
             return
         }
