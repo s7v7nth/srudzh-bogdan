@@ -97,6 +97,7 @@
 		57EF4DE0871B6EF1FD221720 /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
 		58316FB2419FCBF1EEE35F87 /* OnbPaymentsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbPaymentsStep.swift; sourceTree = "<group>"; };
 		60E8C470CCCD2B09786570B6 /* SrudzhBogdanApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SrudzhBogdanApp.swift; sourceTree = "<group>"; };
+		614FB3C97193B6E15CC7C0E4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		631052F70952E945E12A9A2E /* OnbSummaryStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbSummaryStep.swift; sourceTree = "<group>"; };
 		664451F1E97D686DAC0C447D /* IncomeExpenseReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomeExpenseReport.swift; sourceTree = "<group>"; };
 		6917E5981413DB7B417666E9 /* Currencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Currencies.swift; sourceTree = "<group>"; };
@@ -169,6 +170,7 @@
 			isa = PBXGroup;
 			children = (
 				F27D45C17596538634C10AD6 /* Assets.xcassets */,
+				614FB3C97193B6E15CC7C0E4 /* Info.plist */,
 				3D5F996A753FC7D963DE894F /* InfoPlist.xcstrings */,
 				1DD494458B2437F46296E69E /* Localizable.xcstrings */,
 				6A182B7A1C5DB1BFB1B14653 /* RootView.swift */,
@@ -436,9 +438,9 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Срудж Богдан";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID keeps your finances away from prying eyes.";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -523,9 +525,9 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Срудж Богдан";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID keeps your finances away from prying eyes.";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

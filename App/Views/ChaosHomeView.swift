@@ -132,11 +132,6 @@ struct ChaosHomeView: View {
         NavigationStack {
             VStack(spacing: 6) {
                 header
-                if AutoBackup.shared.needsAttention {
-                    BackupBanner().padding(12)
-                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .padding(.horizontal, 16)
-                }
                 PagedStrip(count: 3) { i in
                     switch i {
                     case 0: balanceWidget(cache)
@@ -202,7 +197,10 @@ struct ChaosHomeView: View {
         HStack {
             Button { showSettings = true } label: { Image(systemName: "gearshape").font(.app(.title3)).frame(width: 44, height: 44, alignment: .leading) }
                 .accessibilityLabel(Text("settings.title"))
-            Spacer()
+            Spacer(minLength: 8)
+            // Полный баннер не помещается: экран рассчитан ровно на высоту телефона и вылезал под часы и панель вкладок.
+            BackupBanner(compact: true)
+            Spacer(minLength: 8)
             Button {
                 withAnimation(.spring(duration: 0.25)) { editing.toggle() }
             } label: {
@@ -446,7 +444,7 @@ struct ChaosHomeView: View {
         let isSource = dragID == id
         let dimmed = dragID.map { $0 != id && !canDrop($0, onto: id) } ?? false
         VStack(spacing: 3) {
-            Text(title).font(.app(.caption)).foregroundStyle(ChaosPalette.label).lineLimit(1).minimumScaleFactor(0.8)
+            Text(title).font(.app(.caption)).foregroundStyle(ChaosPalette.label).lineLimit(1).minimumScaleFactor(0.7)
                 .frame(height: 15)
             bubble(icon: icon, color: color, progress: progress, ring: ring)
                 .opacity(zero && progress == nil ? 0.7 : 1)
@@ -454,8 +452,14 @@ struct ChaosHomeView: View {
                 .overlay { if isHover { Circle().stroke(color, lineWidth: 3).frame(width: circle + 12, height: circle + 12).scaleEffect(1.2).blur(radius: 1) } }
                 .overlay(alignment: .topLeading) { if editing { hideBadge(id, hidden: hidden) } }
                 .animation(.spring(duration: 0.25), value: isHover)
-            MoneyText(amount: amount, code: code).font(.app(.caption, .bold)).foregroundStyle(valueColor)
-                .brightness(amount < 0 || alert ? -0.15 : 0).opacity(zero ? 0.5 : 1).lineLimit(1).minimumScaleFactor(0.85)
+            // Пустая категория: прочерк вместо ряда «0,00», чтобы взгляд цеплялся только за реальные траты.
+            if zero, case .category = id {
+                Text(verbatim: "—").font(.app(.caption, .bold)).foregroundStyle(text).opacity(0.4)
+                    .accessibilityLabel(Text(verbatim: MoneyText.plain(0, code: code)))
+            } else {
+                MoneyText(amount: amount, code: code).font(.app(.caption, .bold)).foregroundStyle(valueColor)
+                    .brightness(amount < 0 || alert ? -0.15 : 0).opacity(zero ? 0.5 : 1).lineLimit(1).minimumScaleFactor(0.85)
+            }
         }
         .frame(height: nodeHeight, alignment: .top)
         .containerRelativeFrame(.horizontal) { w, _ in (w - 16) / 4 }

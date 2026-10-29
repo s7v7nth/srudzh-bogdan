@@ -244,11 +244,21 @@ struct BackupRestoreSheet: View {
 /// Видна, только когда с копиями что-то не так. Ведёт в настройки копий.
 struct BackupBanner: View {
     var backup = AutoBackup.shared
+    /// Короткая плашка в одну строку для шапки главного экрана, где на полный баннер нет места.
+    var compact = false
     @State private var open = false
 
     var body: some View {
         if backup.needsAttention {
             Button { open = true } label: {
+                if compact {
+                    Label { Text(title).lineLimit(1).minimumScaleFactor(0.8) } icon: {
+                        Image(systemName: backup.hasFolder ? "exclamationmark.icloud" : "icloud.slash")
+                    }
+                    .font(.app(.caption, .semibold)).foregroundStyle(Theme.warn)
+                    .padding(.horizontal, 10).frame(height: 30)
+                    .background(Theme.warn.opacity(0.14), in: Capsule())
+                } else {
                 HStack(spacing: 12) {
                     Image(systemName: backup.hasFolder ? "exclamationmark.icloud" : "icloud.slash")
                         .font(.app(.title3)).foregroundStyle(Theme.warn)
@@ -260,6 +270,7 @@ struct BackupBanner: View {
                     Image(systemName: "chevron.right").font(.app(.caption, .semibold)).foregroundStyle(.tertiary)
                 }
                 .contentShape(Rectangle())
+                }
             }
             .buttonStyle(.plain)
             .sheet(isPresented: $open) {

@@ -15,12 +15,19 @@ targets:
     sources: [App]
     dependencies:
       - package: LedgerCore
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchLogo
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.timofei.srudzhbogdan
         PRODUCT_NAME: SrudzhBogdan
         INFOPLIST_KEY_CFBundleDisplayName: "Срудж Богдан"
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: "5.9"
         MARKETING_VERSION: "0.1"
