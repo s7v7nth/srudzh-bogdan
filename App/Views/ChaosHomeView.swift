@@ -444,7 +444,7 @@ struct ChaosHomeView: View {
         let isSource = dragID == id
         let dimmed = dragID.map { $0 != id && !canDrop($0, onto: id) } ?? false
         VStack(spacing: 3) {
-            Text(title).font(.app(.caption)).foregroundStyle(ChaosPalette.label).lineLimit(1).minimumScaleFactor(0.7)
+            Text(title).font(.app(.caption)).foregroundStyle(ChaosPalette.label).lineLimit(1).minimumScaleFactor(0.8)
                 .frame(height: 15)
             bubble(icon: icon, color: color, progress: progress, ring: ring)
                 .opacity(zero && progress == nil ? 0.7 : 1)
