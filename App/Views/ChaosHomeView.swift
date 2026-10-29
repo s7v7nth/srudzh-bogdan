@@ -18,7 +18,11 @@ struct ChaosHomeView: View {
     @AppStorage(goldRainKey) private var goldRain = true
 
     @State private var frames: [NodeID: CGRect] = [:]
-    @State private var drag: (id: NodeID, point: CGPoint)?
+    /// Что тащим и над чем держим. Сама точка пальца живёт в `finger`: её читает только кружок-призрак,
+    /// поэтому движение пальца не пересчитывает весь экран.
+    @State private var dragID: NodeID?
+    @State private var hovered: NodeID?
+    @State private var finger = FingerPoint()
     @State private var request: AddRequest?
     @State private var showSettings = false
     @State private var showNewAccount = false
@@ -166,11 +170,16 @@ struct ChaosHomeView: View {
                     && editingAccount == nil && editingCategory == nil,
                 onBegan: { p in
                     guard let id = frames.first(where: { $0.value.contains(p) })?.key else { return false }
-                    drag = (id, p); return true
+                    finger.point = p; hovered = nil; dragID = id; return true
                 },
-                onMoved: { p in if let d = drag { drag = (d.id, p) } },
-                onEnded: { p in if let d = drag { drop(d.id, at: p) }; drag = nil },
-                onCancelled: { drag = nil }
+                onMoved: { p in
+                    guard let id = dragID else { return }
+                    finger.point = p
+                    let h = target(at: p, excluding: id)
+                    if h != hovered { hovered = h }
+                },
+                onEnded: { p in if let id = dragID { drop(id, at: p) }; dragID = nil; hovered = nil },
+                onCancelled: { dragID = nil; hovered = nil }
             ))
             .background(Color(.systemGroupedBackground))
             .onAppear { isVisible = true }
@@ -185,7 +194,7 @@ struct ChaosHomeView: View {
             .sheet(item: $editingAccount) { AccountFormView(account: $0, nextSort: $0.sortID) }
             .sheet(item: $editingCategory) { CategoryFormView(category: $0, isIncome: $0.isIncome) }
             .sensoryFeedback(.impact(weight: .medium), trigger: hovered)
-            .sensoryFeedback(.selection, trigger: drag?.id)
+            .sensoryFeedback(.selection, trigger: dragID)
         }
     }
 
@@ -359,7 +368,7 @@ struct ChaosHomeView: View {
             }
             .scrollTargetBehavior(.viewAligned)
             .scrollClipDisabled()
-            .scrollDisabled(drag != nil)
+            .scrollDisabled(dragID != nil)
             .frame(height: nodeHeight)
         }
         .background(ChaosPalette.zone(tint))
@@ -374,7 +383,7 @@ struct ChaosHomeView: View {
         let pages = stride(from: 0, to: slots.count, by: 8).map { Array(slots[$0 ..< min($0 + 8, slots.count)]) }
         return VStack(alignment: .leading, spacing: 0) {
             zoneTitle("chaos.zone.expenses")
-            PagedStrip(count: pages.count, lockScroll: drag != nil) { i in
+            PagedStrip(count: pages.count, lockScroll: dragID != nil) { i in
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0, alignment: .top), count: 4), spacing: 4) {
                     ForEach(Array(pages[i].enumerated()), id: \.offset) { _, slot in
                         switch slot {
@@ -405,7 +414,7 @@ struct ChaosHomeView: View {
             .frame(height: nodeHeight, alignment: .top)
             .containerRelativeFrame(.horizontal) { w, _ in (w - 16) / 4 }
         }
-        .buttonStyle(.plain).opacity(drag == nil ? 1 : 0.3)
+        .buttonStyle(.plain).opacity(dragID == nil ? 1 : 0.3)
         .accessibilityLabel(Text("chaos.add"))
     }
 
@@ -434,8 +443,8 @@ struct ChaosHomeView: View {
         let alert = progress.map { $0.state != .ok } ?? false
         let valueColor: Color = amount < 0 ? TxType.expense.tint : (alert ? progress!.state.tint : text)
         let isHover = hovered == id
-        let isSource = drag?.id == id
-        let dimmed = drag != nil && !isSource && !canDrop(drag!.id, onto: id)
+        let isSource = dragID == id
+        let dimmed = dragID.map { $0 != id && !canDrop($0, onto: id) } ?? false
         VStack(spacing: 3) {
             Text(title).font(.app(.caption)).foregroundStyle(ChaosPalette.label).lineLimit(1).minimumScaleFactor(0.8)
                 .frame(height: 15)
@@ -490,18 +499,13 @@ struct ChaosHomeView: View {
 
     /// Кружок, который едет за пальцем (чуть выше, чтобы палец его не закрывал).
     @ViewBuilder private var ghost: some View {
-        if let d = drag, let color = color(of: d.id) {
-            Color.clear.frame(width: circle, height: circle)
-                .overlay { Image(systemName: icon(of: d.id)).font(.system(size: 22, weight: .medium)).foregroundStyle(.white) }
-                .liquidGlass(tint: color)
-                .shadow(color: color.opacity(0.4), radius: 12, y: 8)
-                .scaleEffect(1.1)
-                .position(center(d.point))
-                .allowsHitTesting(false)
+        if let id = dragID, let color = color(of: id) {
+            DragGhost(finger: finger, icon: icon(of: id), color: color, size: circle)
         }
     }
 
-    private func center(_ finger: CGPoint) -> CGPoint { CGPoint(x: finger.x, y: finger.y - 36) }
+    private func center(_ finger: CGPoint) -> CGPoint { Self.center(finger) }
+    fileprivate static func center(_ finger: CGPoint) -> CGPoint { CGPoint(x: finger.x, y: finger.y - 36) }
 
     // MARK: Логика перетаскивания
 
@@ -541,8 +545,6 @@ struct ChaosHomeView: View {
         let p = center(finger)
         return frames.first { $0.key != source && $0.value.insetBy(dx: -4, dy: -4).contains(p) && canDrop(source, onto: $0.key) }?.key
     }
-
-    private var hovered: NodeID? { drag.flatMap { target(at: $0.point, excluding: $0.id) } }
 
     private func drop(_ source: NodeID, at finger: CGPoint) {
         guard let t = target(at: finger, excluding: source) else { return }
@@ -635,6 +637,28 @@ struct ChaosHomeView: View {
 }
 
 /// Горизонтальные страницы с точками внизу.
+/// Точка пальца при перетаскивании. Отдельный объект, чтобы её изменения перерисовывали только призрак.
+@Observable final class FingerPoint {
+    var point: CGPoint = .zero
+}
+
+private struct DragGhost: View {
+    let finger: FingerPoint
+    let icon: String
+    let color: Color
+    let size: CGFloat
+
+    var body: some View {
+        Color.clear.frame(width: size, height: size)
+            .overlay { Image(systemName: icon).font(.system(size: 22, weight: .medium)).foregroundStyle(.white) }
+            .liquidGlass(tint: color)
+            .shadow(color: color.opacity(0.4), radius: 12, y: 8)
+            .scaleEffect(1.1)
+            .position(ChaosHomeView.center(finger.point))
+            .allowsHitTesting(false)
+    }
+}
+
 struct PagedStrip<Content: View>: View {
     let count: Int
     var lockScroll = false

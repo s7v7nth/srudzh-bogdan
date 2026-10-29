@@ -130,9 +130,12 @@ struct BudgetProgress {
         let cur = b.currency.isEmpty ? rates.base : b.currency
         guard let p = Budgets.period(start: b.startDate, type: b.repeatType, duration: 1, containing: .now) else { return nil }
         let monitored: Set<UUID>? = b.categories.isEmpty ? nil : Set(b.categories.flatMap { $0.familyIDs })
-        let txs = transactions.filter { $0.type != .transfer && $0.account != nil }.map {
-            BudgetTransaction(amount: $0.amount, date: $0.date, categoryID: $0.category?.uuid,
-                              pending: $0.pending, rate: rates.rate(of: $0, to: cur) ?? 1)
+        // Сначала отбираем операции периода: дальше по каждой идут обращения к счёту, категории и курсу.
+        // Операцию без курса не считаем один к одному, иначе 100 долларов попали бы в бюджет как 100 рублей.
+        let txs = transactions.compactMap { t -> BudgetTransaction? in
+            guard t.date >= p.start, t.date < p.end, t.type != .transfer, t.account != nil,
+                  let rate = rates.rate(of: t, to: cur) else { return nil }
+            return BudgetTransaction(amount: t.amount, date: t.date, categoryID: t.category?.uuid, pending: t.pending, rate: rate)
         }
         let r = Budgets.evaluate(limit: b.amount, period: p, transactions: txs, rules: BudgetRules(monitoredCategories: monitored))
         return BudgetProgress(spent: r.spent, limit: b.amount, remaining: r.remaining, currency: cur, periodEnd: p.end)

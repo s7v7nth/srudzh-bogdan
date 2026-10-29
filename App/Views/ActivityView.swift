@@ -11,17 +11,29 @@ struct ActivityView: View {
     @State private var editing: LedgerTransaction?
     @State private var editingAccount: Account?
 
+    /// Один проход по всем операциям вместо трёх отдельных фильтров.
     private var filtered: [LedgerTransaction] {
-        all.filter { account == nil || $0.account === account }
-           .filter { typeFilter == nil || $0.type == typeFilter }
-           .filter { search.isEmpty || $0.payee.localizedCaseInsensitiveContains(search)
-                     || ($0.category?.name.localizedCaseInsensitiveContains(search) ?? false) }
+        all.filter { t in
+            (account == nil || t.account === account)
+                && (typeFilter == nil || t.type == typeFilter)
+                && (search.isEmpty || t.payee.localizedCaseInsensitiveContains(search)
+                    || (t.category?.name.localizedCaseInsensitiveContains(search) ?? false))
+        }
     }
-    private var days: [(Date, [LedgerTransaction])] {
-        Dictionary(grouping: filtered) { Calendar.current.startOfDay(for: $0.date) }.sorted { $0.key > $1.key }
+
+    /// Операции уже отсортированы по дате, поэтому дни собираются подряд, без словаря и пересортировки.
+    private func days(_ list: [LedgerTransaction]) -> [(Date, [LedgerTransaction])] {
+        let cal = Calendar.current
+        var out: [(Date, [LedgerTransaction])] = []
+        for t in list {
+            let day = cal.startOfDay(for: t.date)
+            if out.last?.0 == day { out[out.count - 1].1.append(t) } else { out.append((day, [t])) }
+        }
+        return out
     }
 
     var body: some View {
+        let list = filtered
         let content = List {
             Section {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -32,17 +44,17 @@ struct ActivityView: View {
                 }
             }
             .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
-            if filtered.isEmpty {
+            if list.isEmpty {
                 ContentUnavailableView("activity.empty", systemImage: "list.bullet", description: Text("activity.emptyHint"))
             }
-            ForEach(days, id: \.0) { day, items in
+            ForEach(days(list), id: \.0) { day, items in
                 Section(day.formatted(date: .complete, time: .omitted)) {
                     ForEach(items) { t in row(t).contentShape(Rectangle()).onTapGesture { editing = t }.swipeActions { Button("common.delete", role: .destructive) { remove(t) } } }
                 }
             }
         }
         .contentMargins(.bottom, 90, for: .scrollContent)
-        .animation(.snappy, value: filtered.map(\.persistentModelID))
+        .animation(.snappy, value: list.map(\.persistentModelID))
         .searchable(text: $search, prompt: Text("activity.search"))
         .themedScreen()
         .navigationTitle(account?.name ?? String(localized: "tab.activity"))

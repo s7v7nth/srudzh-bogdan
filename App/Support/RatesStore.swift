@@ -46,7 +46,10 @@ import LedgerCore
     /// Курс операции в валюту `code`: сохранённый на момент операции, если он записан для этой валюты, иначе текущий.
     func rate(of tx: LedgerTransaction, to code: String) -> Decimal? {
         if !tx.baseCode.isEmpty, tx.baseCode == code { return tx.rateToBase }
-        return rate(tx.currency, code)
+        if let r = rate(tx.currency, code) { return r }
+        // Валюты операции нет в таблице курсов: идём через сохранённый в операции курс к прежней основной валюте.
+        guard !tx.baseCode.isEmpty, let hop = rate(tx.baseCode, code) else { return nil }
+        return tx.rateToBase * hop
     }
 
     /// Сумма операции в валюте `code` по курсу операции. nil, если курса нет.

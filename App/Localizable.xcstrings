@@ -10948,6 +10948,40 @@
           }
         }
       }
+    },
+    "storeError.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't open your data"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не получилось открыть данные"
+          }
+        }
+      }
+    },
+    "storeError.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your records are still on the phone. Update the app or restore from an automatic backup."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Записи остались на телефоне. Обновите приложение или восстановите данные из автокопии."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

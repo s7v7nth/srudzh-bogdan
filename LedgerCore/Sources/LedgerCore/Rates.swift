@@ -2,14 +2,21 @@ import Foundation
 
 public extension Money {
     /// Сколько знаков после запятой у валюты (BYN 2, JPY 0). Берётся из системных данных.
+    /// Ответ запоминается: создавать NumberFormatter на каждую операцию дорого.
     static func fractionDigits(_ code: String) -> Int {
+        digitsLock.lock(); defer { digitsLock.unlock() }
+        if let d = digitsCache[code] { return d }
         let f = NumberFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.numberStyle = .currency
         f.currencyCode = code
+        digitsCache[code] = f.maximumFractionDigits
         return f.maximumFractionDigits
     }
 }
+
+private let digitsLock = NSLock()
+private nonisolated(unsafe) var digitsCache: [String: Int] = [:]
 
 /// Таблица курсов: сколько единиц валюты приходится на 1 доллар США. Коды в верхнем регистре.
 public struct RateTable: Equatable {

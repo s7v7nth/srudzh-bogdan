@@ -50,7 +50,8 @@ struct ReportsView: View {
 
     // MARK: Выводы
 
-    private struct Insight: Identifiable { let id = UUID(); let icon: String; let tint: Color; let text: String }
+    /// Ключ по тексту: с новым UUID на каждую отрисовку карточка выводов собиралась бы заново.
+    private struct Insight: Identifiable { var id: String { text }; let icon: String; let tint: Color; let text: String }
 
     @ViewBuilder private func insights(_ d: ReportData) -> some View {
         let list = makeInsights(d)
