@@ -38,7 +38,6 @@ import LedgerCore
            let alias = (try? ctx.fetch(FetchDescriptor<CardAlias>(predicate: #Predicate { $0.last4 == last4 })))?.first,
            let account = alias.account {
             assign(tx, to: account, ctx: ctx, rates: rates)
-            if account.currency != sms.currency { tx.notes = "SMS: \(sms.amount) \(sms.currency)" }
         }
         try? ctx.save()
         return .added(sms)
@@ -56,6 +55,13 @@ import LedgerCore
     }
 
     static func assign(_ tx: LedgerTransaction, to account: Account, ctx: ModelContext, rates: RatesStore) {
+        // Сумма из СМС в валюте карты; если счёт в другой валюте, пересчитываем по курсу и оставляем оригинал в заметке.
+        if tx.account == nil, !tx.smsCurrency.isEmpty, tx.smsCurrency != account.currency,
+           let converted = rates.convert(tx.amount, from: tx.smsCurrency, to: account.currency) {
+            let original = tx.amount.magnitude
+            tx.amount = converted
+            tx.notes = "SMS: \(original) \(tx.smsCurrency)"
+        }
         tx.account = account
         rates.stamp(tx)
         let when = tx.date
