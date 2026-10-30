@@ -189,7 +189,7 @@ struct OnbSliderRow: View {
             }
             Slider(value: Binding(get: { NSDecimalNumber(decimal: value).doubleValue },
                                   set: { value = Decimal(($0 / stepD).rounded()) * step }),
-                   in: 0...upper, step: stepD)
+                   in: 0...upper, step: stepD, onEditingChanged: { if $0 { focused = false } })
                 .tint(Theme.brand)
         }
         .padding(.vertical, 2)

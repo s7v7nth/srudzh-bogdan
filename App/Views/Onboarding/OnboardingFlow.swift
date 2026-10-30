@@ -71,15 +71,35 @@ struct OnboardingFlow: View {
                         .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 24)
                 }
                 .scrollDismissesKeyboard(.interactively)
-                if !keyboardUp { footer }
+                if keyboardUp { keyboardDoneBar } else { footer }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardUp = true }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardUp = false }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in keyboardUp = false }
+            .onChange(of: step) { dismissKeyboard() }
             .background(Theme.bg.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
             .onbKeyboardTools()
         }
         .interactiveDismissDisabled()
+    }
+
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        keyboardUp = false
+    }
+
+    /// Пока открыта клавиатура, вместо «Продолжить» всегда есть крупная кнопка «Готово».
+    private var keyboardDoneBar: some View {
+        HStack {
+            Spacer()
+            Button(action: dismissKeyboard) {
+                Text("common.done").font(.app(.headline)).padding(.horizontal, 20).padding(.vertical, 10)
+            }
+            .buttonStyle(.borderedProminent).tint(Theme.brand)
+        }
+        .padding(.horizontal, 20).padding(.vertical, 8)
+        .background(Theme.bg)
     }
 
     // MARK: Шапка и подвал
