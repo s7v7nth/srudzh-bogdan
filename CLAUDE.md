@@ -30,3 +30,12 @@
 - Онбординг в отладочной сборке: `-onbDemo` заполняет ответы примерами, `-onbStep N` (0...10) открывает нужный шаг (код в `App/Support/DemoData.swift`). `-backupFolder <путь>` задаёт папку автокопий без окна выбора. Запускать через `xcrun simctl launch`, на чистой установке (`simctl uninstall`).
 - Кириллицу в поля симулятора лучше не вводить через инструмент (вставка портит текст и просит разрешение), названия для проверки писать латиницей.
 - Тексты интерфейса только через ключи в `App/Localizable.xcstrings` (русский и английский). Новый текст: добавить ключ в оба языка.
+
+## Android-версия (`android/`)
+
+- Kotlin + Jetpack Compose, minSdk 26. Модуль `core` без Android (логика: разбор СМС, курсы, формат копии, тесты), модуль `app` (экраны, чтение СМС).
+- Данные хранятся одним файлом в формате копии iPhone (`BackupCodec`), поэтому копия переносится между телефонами в обе стороны. Бюджеты, расписание и план пока не показываются, но сохраняются как есть.
+- Сборка: `JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`, затем в `android/` команды `./gradlew :core:test` (тесты логики) и `./gradlew :app:assembleRelease` (APK для телефона: `app/build/outputs/apk/release/app-release.apk`).
+- SDK лежит в `~/Library/Android/sdk`, эмулятор `srudzh` (Android 15). СМС в эмулятор: `adb emu sms send 7299 "<текст СМС>"`.
+- Тексты в `app/src/main/res/values/strings.xml` (английский) и `values-ru/strings.xml` (русский), новый текст добавлять в оба файла.
+- Разбор СМС должен совпадать с iPhone-версией: менять `BankSms.kt` вместе с `LedgerCore/Sources/LedgerCore/BankSMS.swift` и тестами в обоих местах.
