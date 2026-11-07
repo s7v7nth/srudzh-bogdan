@@ -12,5 +12,7 @@ else
   git clone "$REPO" "$DEST"
 fi
 cd "$DEST"
-chmod +x refresh-app.sh
-exec ./refresh-app.sh
+chmod +x refresh-app.sh auto-refresh.sh
+./refresh-app.sh || exit 1
+# Фоновая автопереустановка раз в 5 дней, пока телефон бывает рядом с Маком
+./auto-refresh.sh install

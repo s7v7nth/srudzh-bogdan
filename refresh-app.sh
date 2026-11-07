@@ -53,6 +53,7 @@ for x in d.get("result", {}).get("devices", []):
 PY
 )"
 rm -f "$DEV_JSON"
+[ -n "${DEVICE_ID:-}" ] && DEVICES="$DEVICE_ID	iPhone"   # DEVICE_ID задаёт auto-refresh.sh
 [ -n "$DEVICES" ] || die "не вижу iPhone. Подключи кабелем, разблокируй экран, нажми «Доверять» на телефоне, включи Режим разработчика (Настройки → Конфиденциальность и безопасность → Режим разработчика)."
 if [ "$(echo "$DEVICES" | wc -l | tr -d ' ')" -gt 1 ]; then
   echo "$DEVICES" | awk -F'\t' '{print NR") "$2}'
