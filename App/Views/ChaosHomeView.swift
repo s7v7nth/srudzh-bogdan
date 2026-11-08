@@ -134,6 +134,10 @@ struct ChaosHomeView: View {
         let stats = makeStats()
         let live = live
         NavigationStack {
+            // Экран рассчитан ровно на высоту телефона. Когда под окном операции поднимается клавиатура,
+            // система урезает высоту, и навигация центрировала не влезающий экран: он уезжал вверх.
+            // GeometryReader всегда кладёт содержимое от верхнего края, лишнее просто уходит вниз под окно.
+            GeometryReader { _ in
             VStack(spacing: 6) {
                 header
                 PagedStrip(count: 3) { i in
@@ -155,6 +159,7 @@ struct ChaosHomeView: View {
                 }
                 categoryPages(stats)
                 Spacer(minLength: 0)
+            }
             }
             .modifier(DragScrollLock(live: live))
             .coordinateSpace(name: space)
