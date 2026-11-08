@@ -64,6 +64,22 @@ struct AmountField: View {
         HStack {
             TextField(title, text: $text).keyboardType(.decimalPad).font(.app(.title3).monospacedDigit())
                 .focused($focused)
+                .toolbar {
+                    // Кнопки калькулятора над клавиатурой, пока курсор в этом поле.
+                    ToolbarItemGroup(placement: .keyboard) {
+                        if focused {
+                            ForEach(["+", "−", "×", "÷"], id: \.self) { op in
+                                Button(op) { text += op }.font(.app(.title3))
+                            }
+                            Spacer()
+                            Button("=") {
+                                if let r = Calculator.resultText(text, currency: code) { text = r }
+                            }
+                            .font(.app(.title3).bold())
+                            .disabled(!Calculator.hasOperator(text))
+                        }
+                    }
+                }
             CurrencySymbolView(code: code).font(.app(.title3)).foregroundStyle(.secondary)
         }
         .task {
