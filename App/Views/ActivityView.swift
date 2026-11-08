@@ -49,11 +49,13 @@ struct ActivityView: View {
             }
             ForEach(days(list), id: \.0) { day, items in
                 Section(day.formatted(date: .complete, time: .omitted)) {
-                    ForEach(items) { t in row(t).contentShape(Rectangle()).onTapGesture { editing = t }.swipeActions { Button("common.delete", role: .destructive) { remove(t) } } }
+                    ForEach(items) { t in row(t).contentShape(Rectangle()).onTapGesture { editing = t }.swipeActions { Button("common.delete") { remove(t) }.tint(.red) } }
                 }
             }
         }
         .contentMargins(.bottom, 90, for: .scrollContent)
+        // Список сам плавно убирает удалённую строку (и пустой день целиком), а при поиске строки не разъезжаются.
+        .animation(search.isEmpty ? Motion.standard : nil, value: list.map(\.persistentModelID))
         .searchable(text: $search, prompt: Text("activity.search"))
         .themedScreen()
         .navigationTitle(account?.name ?? String(localized: "tab.activity"))
@@ -110,10 +112,10 @@ struct ActivityView: View {
     }
 
     /// У перевода две половинки, удаляем обе.
+    /// Кнопка удаления без системной роли «удалить»: с ней список убирает строку сам, а пустой день
+    /// исчезает отдельным рывком позже. Так строка и день уходят одним плавным движением.
     private func remove(_ t: LedgerTransaction) {
-        withAnimation(Motion.standard) {
-            if let id = t.transferID { all.filter { $0.transferID == id }.forEach(ctx.delete) } else { ctx.delete(t) }
-        }
+        if let id = t.transferID { all.filter { $0.transferID == id }.forEach(ctx.delete) } else { ctx.delete(t) }
         Haptics.delete()
     }
 }

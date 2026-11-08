@@ -120,7 +120,7 @@ struct CategoriesView: View {
         .contentShape(Rectangle())
         .onTapGesture { editing = c }
         .swipeActions {
-            Button("common.delete", role: .destructive) { deleting = c }
+            Button("common.delete", role: .destructive) { deleting = c }.tint(.red)
             Button("common.edit") { editing = c }.tint(.blue)
         }
     }

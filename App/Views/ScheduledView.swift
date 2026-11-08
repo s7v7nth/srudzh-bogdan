@@ -69,7 +69,7 @@ struct ScheduledView: View {
             }
         }
         .swipeActions(edge: .trailing) {
-            Button("common.delete", role: .destructive) { ctx.delete(r); Haptics.delete() }
+            Button("common.delete", role: .destructive) { ctx.delete(r); Haptics.delete() }.tint(.red)
             Button("sched.amount") { editing = r }.tint(.blue)
             if r.type == .expense { Button("loan.convert") { converting = r }.tint(.orange) }
         }

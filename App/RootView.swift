@@ -46,6 +46,7 @@ struct RootView: View {
                     .transition(.opacity)
             }
         }
+
         .overlay(alignment: .bottomTrailing) {
             if !(chaos && tab == 0) { addMenu }
         }

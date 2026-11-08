@@ -75,20 +75,21 @@ struct MainTabs<Page: View>: View {
         HStack(spacing: 0) {
             ForEach(tabs) { t in
                 let on = t.id == selection
-                Button { select(t.id) } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: t.icon).font(.system(size: 18, weight: .semibold)).frame(height: 22)
-                        Text(t.title).font(.app(.caption2, .semibold)).lineLimit(1).minimumScaleFactor(0.7)
-                    }
-                    .foregroundStyle(on ? Theme.brand : Color.secondary)
-                    .frame(maxWidth: .infinity).padding(.vertical, 7)
-                    .background {
-                        if on { Capsule().fill(Theme.brand.opacity(0.16)).matchedGeometryEffect(id: "pill", in: pill) }
-                    }
-                    .contentShape(Capsule())
+                VStack(spacing: 3) {
+                    Image(systemName: t.icon).font(.system(size: 18, weight: .semibold)).frame(height: 22)
+                    Text(t.title).font(.app(.caption2, .semibold)).lineLimit(1).minimumScaleFactor(0.7)
                 }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(on ? [.isSelected] : [])
+                .foregroundStyle(on ? Theme.brand : Color.secondary)
+                .frame(maxWidth: .infinity).padding(.vertical, 7)
+                .background {
+                    if on { Capsule().fill(Theme.brand.opacity(0.16)).matchedGeometryEffect(id: "pill", in: pill) }
+                }
+                .contentShape(Capsule())
+                // Как у системной панели: вкладка переключается в момент касания, а не когда палец отпущен.
+                .gesture(DragGesture(minimumDistance: 0).onChanged { _ in select(t.id) })
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
+                .accessibilityAction { select(t.id) }
             }
         }
         .padding(5)

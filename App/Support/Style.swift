@@ -221,16 +221,65 @@ private struct CapsuleFill: View {
     }
 }
 
-/// Крупная галочка поверх формы после сохранения, перед закрытием окна.
+/// Галочка «сохранено»: окно операции закрывается сразу, а галочка ещё немного висит поверх приложения.
+/// Рисуется в отдельном прозрачном слое над всеми окнами, поэтому видна и пока окно операции уезжает вниз.
+@MainActor @Observable final class SavedFlash {
+    static let shared = SavedFlash()
+    private(set) var tint: Color?
+    private var token = 0
+    @ObservationIgnored private var window: UIWindow?
+
+    func show(_ tint: Color) {
+        attachWindow()
+        token += 1
+        let mine = token
+        withAnimation(.spring(duration: 0.3, bounce: 0.4)) { self.tint = tint }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { [weak self] in
+            guard let self, self.token == mine else { return }
+            withAnimation(Motion.standard) { self.tint = nil }
+        }
+    }
+
+    private func attachWindow() {
+        guard window == nil,
+              let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
+        let host = UIHostingController(rootView: SavedFlashLayer())
+        host.view.backgroundColor = .clear
+        let w = UIWindow(windowScene: scene)
+        w.rootViewController = host
+        w.windowLevel = .alert + 1
+        w.backgroundColor = .clear
+        w.isUserInteractionEnabled = false
+        w.isHidden = false
+        window = w
+    }
+}
+
+private struct SavedFlashLayer: View {
+    var body: some View {
+        ZStack {
+            if let tint = SavedFlash.shared.tint {
+                SavedBadge(tint: tint).transition(.scale(scale: 0.5).combined(with: .opacity))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
+    }
+}
+
+/// Крупная подпрыгивающая галочка после сохранения операции.
 struct SavedBadge: View {
     let tint: Color
+    @State private var bounce = false
 
     var body: some View {
         Image(systemName: "checkmark.circle.fill")
             .font(.system(size: 76, weight: .bold))
             .foregroundStyle(tint)
+            .symbolEffect(.bounce, value: bounce)
             .padding(28)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28))
+            .onAppear { bounce = true }
             .accessibilityHidden(true)
     }
 }

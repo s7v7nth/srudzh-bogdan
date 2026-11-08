@@ -117,7 +117,7 @@ struct AccountsView: View {
         } label: { row(a) }
         .contextMenu { Button("common.edit", systemImage: "pencil") { editing = a } }
         .swipeActions {
-            Button("common.delete", role: .destructive) { toDelete = a }
+            Button("common.delete", role: .destructive) { toDelete = a }.tint(.red)
             Button("common.edit") { editing = a }.tint(.blue)
         }
     }

@@ -22,6 +22,7 @@ struct AddTransactionView: View {
     @State private var submitted = false
     @State private var errorTick = 0
     @State private var saved = false
+    @State private var pendingWrite: PendingWrite?
 
     /// Редактируемая операция (nil — создаём новую). У перевода две половинки: исходящая и входящая.
     private let outTx: LedgerTransaction?
@@ -126,13 +127,11 @@ struct AddTransactionView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("common.cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("common.save", action: save).disabled(saved) }
             }
+            .onDisappear { flushWrite() }
             .overlay {
                 if accounts.isEmpty {
                     ContentUnavailableView("add.needAccount", systemImage: "creditcard", description: Text("add.needAccountHint")).background(.background)
                 }
-            }
-            .overlay {
-                if saved { SavedBadge(tint: type.tint).transition(.scale(scale: 0.92).combined(with: .opacity)) }
             }
         }
     }
@@ -145,7 +144,7 @@ struct AddTransactionView: View {
     }
 
     private func save() {
-        // Пока показывается галочка, окно ещё открыто: повторное нажатие не должно создать вторую операцию.
+        // Окно уже закрывается: повторное нажатие не должно создать вторую операцию.
         guard !saved else { return }
         submitted = true
         guard let amount, let account else { fail(); return }
@@ -166,20 +165,37 @@ struct AddTransactionView: View {
                                          notes: notes, pending: pending, account: account, category: category)]
             category?.lastUsed = .now
         }
-        for tx in created { ctx.insert(tx); rates.stamp(tx) }
         let day = date
-        Task { await rates.stampHistorical(created, on: day) }
-        finish()
+        finish {
+            for tx in created { ctx.insert(tx); rates.stamp(tx) }
+            Task { await rates.stampHistorical(created, on: day) }
+        }
     }
 
     private func fail() { errorTick += 1; Haptics.error() }
 
-    /// Показывает галочку и закрывает окно, как только она проявилась.
-    private func finish() {
+    /// Закрывает окно сразу, а галочка остаётся поверх приложения ещё на мгновение.
+    /// Новая операция записывается, когда окно уже уехало (или почти уехало): пересчёт всех экранов
+    /// под ним иначе на треть секунды задерживает начало закрытия.
+    private func finish(_ apply: @escaping () -> Void = {}) {
         Haptics.success()
+        saved = true
+        pendingWrite = PendingWrite(apply)
         onSaved?()
-        withAnimation(Motion.quick) { saved = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { dismiss() }
+        SavedFlash.shared.show(type.tint)
+        // Система не начинает увозить окно, пока клавиатура не уедет сама (около трети секунды).
+        // Убираем её мгновенно: окно уезжает сразу и уносит форму с собой.
+        UIView.performWithoutAnimation {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+        dismiss()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { flushWrite() }
+    }
+
+    private func flushWrite() {
+        let write = pendingWrite
+        pendingWrite = nil
+        write?.run()
     }
 
     /// Правит операцию на месте; у перевода обновляются обе половинки.
@@ -202,4 +218,11 @@ struct AddTransactionView: View {
         Task { await rates.stampHistorical(changed, on: day) }
         finish()
     }
+}
+
+/// Отложенная запись новой операции: выполняется один раз, когда окно закрылось или через 0,35 с.
+private final class PendingWrite {
+    private var action: (() -> Void)?
+    init(_ action: @escaping () -> Void) { self.action = action }
+    func run() { action?(); action = nil }
 }
