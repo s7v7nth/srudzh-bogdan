@@ -98,6 +98,7 @@
     <string name="kind_cash">Наличные</string>
     <string name="kind_creditLine">Кредитная линия</string>
     <string name="kind_debt">Долг</string>
+    <string name="kind_loan">Кредит</string>
     <string name="kind_savings">Сбережения</string>
     <string name="rates_builtin">Встроенные курсы</string>
     <string name="rates_error">Не удалось загрузить курсы. Используются последние сохранённые.</string>

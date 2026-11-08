@@ -125,6 +125,7 @@ object AppIcons {
             AccountKind.SAVINGS -> "building.columns"
             AccountKind.CREDIT_LINE -> "creditcard.and.123"
             AccountKind.DEBT -> "person.2"
+            AccountKind.LOAN -> "percent"
         },
     )
 }

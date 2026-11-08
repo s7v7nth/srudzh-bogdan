@@ -151,9 +151,10 @@ import LedgerCore
         return hot.compactMap { a in items.first { $0.1 == a }.map { (end: $0.0, alert: a) } }
     }
 
-    /// Расходы по расписанию до `until`, в основной валюте.
+    /// Расходы по расписанию (и платежи по кредитам) до `until`, в основной валюте.
     private static func upcomingPayments(ctx: ModelContext, rates: RatesStore, until: Date) -> [(date: Date, payment: EveningDigest.Payment)] {
-        let items = ((try? ctx.fetch(FetchDescriptor<RecurringTransaction>())) ?? []).filter { $0.active && $0.type == .expense }
+        let items = ((try? ctx.fetch(FetchDescriptor<RecurringTransaction>())) ?? [])
+            .filter { $0.active && ($0.type == .expense || ($0.type == .transfer && $0.toAccount?.isLoan == true)) }
         var result: [(Date, EveningDigest.Payment)] = []
         for r in items {
             let currency = r.account?.currency ?? rates.base

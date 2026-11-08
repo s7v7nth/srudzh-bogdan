@@ -70,6 +70,7 @@ val AccountKind.label: Int
         AccountKind.SAVINGS -> R.string.kind_savings
         AccountKind.CREDIT_LINE -> R.string.kind_creditLine
         AccountKind.DEBT -> R.string.kind_debt
+        AccountKind.LOAN -> R.string.kind_loan
     }
 
 /** Общий капитал в основной валюте и коды валют, для которых нет курса. */

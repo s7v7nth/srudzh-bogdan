@@ -29,6 +29,7 @@ struct ChaosHomeView: View {
     @State private var showAll = false
     @State private var editingAccount: Account?
     @State private var editingCategory: Category?
+    @State private var openLoan: Account?
     /// Перетаскивание, которое открыло окно операции: после сохранения из источника в получателя летят монетки.
     @State private var pendingDrop: (source: NodeID, target: NodeID)?
     @State private var dropSaved = false
@@ -42,6 +43,8 @@ struct ChaosHomeView: View {
     private let space = "chaos"
 
     enum NodeID: Hashable { case account(PersistentIdentifier), category(UUID) }
+    enum Zone: Hashable { case income, accounts, expenses }
+    struct ScrollJump: Equatable { let target: PersistentIdentifier; let id = UUID() }
 
     struct AddRequest: Identifiable {
         let id = UUID()
@@ -49,6 +52,7 @@ struct ChaosHomeView: View {
         var from: Account? = nil
         var to: Account? = nil
         var category: Category? = nil
+        var amount: Decimal? = nil
     }
 
     struct NewCategory: Identifiable { let id = UUID(); let isIncome: Bool }
@@ -82,10 +86,14 @@ struct ChaosHomeView: View {
         if let month = Calendar.current.dateInterval(of: .month, for: .now) {
             // Один проход по операциям вместо двух; дата проверяется первой, она дешевле связей.
             var own: [UUID: Decimal] = [:]
-            for t in transactions where month.contains(t.date) && t.type != .transfer {
+            // Платёж по кредиту (перевод на счёт-кредит) трата в категории кредита, как и в бюджете.
+            // Начальный долг и поправки на самом счёте-кредите тратами не считаются.
+            for t in transactions where month.contains(t.date) {
+                let loanCategory = t.loanPaymentCategory
+                if t.account?.isLoan == true ? loanCategory == nil : t.type == .transfer { continue }
                 let v = rates.value(of: t, in: rates.base)
-                if t.type == .expense { s.monthExpenses += abs(v ?? 0) }
-                if let v, let c = t.category { own[c.uuid, default: 0] += abs(v) }
+                if t.type == .expense || loanCategory != nil { s.monthExpenses += abs(v ?? 0) }
+                if let v, let id = loanCategory ?? t.category?.uuid { own[id, default: 0] += abs(v) }
             }
             for c in categories where c.parent == nil {
                 s.totals[c.uuid] = own[c.uuid, default: 0] + c.children.reduce(Decimal(0)) { $0 + own[$1.uuid, default: 0] }
@@ -149,11 +157,11 @@ struct ChaosHomeView: View {
                 }
                 .frame(height: 152)
 
-                ribbon("chaos.zone.income", tint: ChaosPalette.income) {
+                ribbon("chaos.zone.income", tint: ChaosPalette.income, zone: .income) {
                     ForEach(incomeList) { c in incomeNode(c, stats) }
                     addCell(color: ChaosPalette.incomeText) { newCategory = NewCategory(isIncome: true) }
                 }
-                ribbon("chaos.zone.accounts", tint: ChaosPalette.account) {
+                ribbon("chaos.zone.accounts", tint: ChaosPalette.account, zone: .accounts) {
                     ForEach(accountList) { a in accountNode(a, stats) }
                     addCell(color: ChaosPalette.accountText) { showNewAccount = true }
                 }
@@ -165,6 +173,7 @@ struct ChaosHomeView: View {
             .coordinateSpace(name: space)
             // Рамки нужны только жестам, поэтому лежат вне состояния экрана: прокрутка лент больше не перерисовывает экран.
             .onPreferenceChange(FramesKey.self) { live.frames = $0 }
+            .onPreferenceChange(ZonesKey.self) { live.zones = $0 }
             .overlay(alignment: .topLeading) { DragGhost(live: live, size: circle) }
             .overlay(alignment: .topLeading) {
                 if let f = flight {
@@ -173,7 +182,7 @@ struct ChaosHomeView: View {
             }
             .background(LongPressDragHost(
                 enabled: isVisible && request == nil && !showSettings && !showNewAccount && newCategory == nil
-                    && editingAccount == nil && editingCategory == nil,
+                    && editingAccount == nil && editingCategory == nil && openLoan == nil,
                 onBegan: { p in
                     guard let id = live.frames.first(where: { $0.value.contains(p) })?.key,
                           let color = color(of: id) else { return false }
@@ -181,6 +190,7 @@ struct ChaosHomeView: View {
                     live.point = p; live.hovered = nil
                     live.ghostIcon = icon(of: id); live.ghostColor = color
                     live.source = id
+                    startAutoScroll()
                     return true
                 },
                 onMoved: { p in
@@ -189,21 +199,28 @@ struct ChaosHomeView: View {
                     let h = target(at: p, excluding: id)
                     if h != live.hovered { live.hovered = h }
                 },
-                onEnded: { p in if let id = live.source { drop(id, at: p) }; live.source = nil; live.hovered = nil },
-                onCancelled: { live.source = nil; live.hovered = nil }
+                onEnded: { p in if let id = live.source { drop(id, at: p) }; stopAutoScroll(); live.source = nil; live.hovered = nil },
+                onCancelled: { stopAutoScroll(); live.source = nil; live.hovered = nil }
             ))
             .background(Color(.systemGroupedBackground))
             .onAppear { isVisible = true }
             .onDisappear { isVisible = false }
             .navigationBarHidden(true)
             .sheet(item: $request, onDismiss: launchCoins) { r in
-                AddTransactionView(type: r.type, toAccount: r.to, fromAccount: r.from, category: r.category) { dropSaved = true }
+                AddTransactionView(type: r.type, toAccount: r.to, fromAccount: r.from, category: r.category, amount: r.amount) { dropSaved = true }
             }
             .sheet(isPresented: $showSettings) { SettingsView() }
             .sheet(isPresented: $showNewAccount) { AccountFormView(nextSort: accounts.count) }
             .sheet(item: $newCategory) { CategoryFormView(isIncome: $0.isIncome) }
             .sheet(item: $editingAccount) { AccountFormView(account: $0, nextSort: $0.sortID) }
             .sheet(item: $editingCategory) { CategoryFormView(category: $0, isIncome: $0.isIncome) }
+            .sheet(item: $openLoan) { a in
+                NavigationStack {
+                    LoanView(account: a).toolbar {
+                        ToolbarItem(placement: .cancellationAction) { Button("common.done") { openLoan = nil } }
+                    }
+                }
+            }
             .modifier(DragFeedback(live: live))
         }
     }
@@ -373,20 +390,28 @@ struct ChaosHomeView: View {
             .padding(.leading, 20).padding(.top, 6).frame(height: zoneTitleHeight, alignment: .center)
     }
 
-    private func ribbon<C: View>(_ title: LocalizedStringKey, tint: Color, @ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+    private func ribbon<C: View>(_ title: LocalizedStringKey, tint: Color, zone: Zone, @ViewBuilder _ content: () -> C) -> some View {
+        let row = HStack(alignment: .top, spacing: 0) { content() }
+        return VStack(alignment: .leading, spacing: 0) {
             zoneTitle(title)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 0) { content() }
-                    .scrollTargetLayout().padding(.horizontal, 8)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    row.scrollTargetLayout().padding(.horizontal, 8)
+                }
+                .scrollTargetBehavior(.viewAligned)
+                .scrollClipDisabled()
+                .modifier(RibbonJump(live: live, zone: zone, proxy: proxy))
             }
-            .scrollTargetBehavior(.viewAligned)
-            .scrollClipDisabled()
             .frame(height: nodeHeight)
         }
         .background(ChaosPalette.zone(tint))
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(zoneFrame(zone))
         .padding(.horizontal, 12)
+    }
+
+    private func zoneFrame(_ zone: Zone) -> some View {
+        GeometryReader { g in Color.clear.preference(key: ZonesKey.self, value: [zone: g.frame(in: .named(space))]) }
     }
 
     private enum Slot { case category(Category), add }
@@ -396,7 +421,7 @@ struct ChaosHomeView: View {
         let pages = stride(from: 0, to: slots.count, by: 8).map { Array(slots[$0 ..< min($0 + 8, slots.count)]) }
         return VStack(alignment: .leading, spacing: 0) {
             zoneTitle("chaos.zone.expenses")
-            PagedStrip(count: pages.count) { i in
+            PagedStrip(count: pages.count, jump: { [live] in live.pageJump }) { i in
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0, alignment: .top), count: 4), spacing: 4) {
                     ForEach(Array(pages[i].enumerated()), id: \.offset) { _, slot in
                         switch slot {
@@ -412,6 +437,7 @@ struct ChaosHomeView: View {
         .padding(.bottom, 8)
         .background(ChaosPalette.zone(ChaosPalette.expense))
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(zoneFrame(.expenses))
         .padding(.horizontal, 12)
     }
 
@@ -482,7 +508,11 @@ struct ChaosHomeView: View {
 
     /// Что получится, если отпустить `source` над `target`. nil, если пара не имеет смысла.
     private func request(from source: NodeID, to target: NodeID) -> AddRequest? {
-        if let a = account(source), let b = account(target), a !== b { return AddRequest(type: .transfer, from: a, to: b) }
+        if let a = account(source), let b = account(target), a !== b {
+            // Перевод на кредит: подставляем сумму ежемесячного платежа.
+            let payment = b.isLoan ? recurring.first { $0.active && $0.toAccount?.persistentModelID == b.persistentModelID }.map { abs($0.amount) } : nil
+            return AddRequest(type: .transfer, from: a, to: b, amount: payment)
+        }
         if let a = account(source), let c = category(target), !c.isIncome { return AddRequest(type: .expense, from: a, category: c) }
         if let c = category(source), c.isIncome, let a = account(target) { return AddRequest(type: .income, from: a, category: c) }
         return nil
@@ -499,6 +529,8 @@ struct ChaosHomeView: View {
     /// Вызывается на каждое движение пальца, поэтому группы берутся из готового словаря, без поиска по базе.
     private func target(at finger: CGPoint, excluding source: NodeID) -> NodeID? {
         let p = center(finger)
+        // Кружки, уехавшие за край ленты, не видны, но их рамки остаются: попадание считаем только внутри зон.
+        guard live.zones.values.contains(where: { $0.contains(p) }) else { return nil }
         let s = live.groups[source]
         return live.frames.first {
             $0.key != source && $0.value.insetBy(dx: -4, dy: -4).contains(p) && Self.canDrop(s, onto: live.groups[$0.key], editing: editing)
@@ -513,6 +545,78 @@ struct ChaosHomeView: View {
         pendingDrop = (source, t)
         dropSaved = false
         if let c = category(t), let r = budgetRatio(of: c) { live.rings[c.uuid] = r }
+    }
+
+    // MARK: Прокрутка у края
+
+    /// Ширина полосы у края ленты, где задержка кружка листает ленту.
+    private let edgeWidth: CGFloat = 34
+
+    /// Пока кружок держат у левого или правого края ленты, она сдвигается на один кружок (страницы расходов на страницу).
+    private func startAutoScroll() {
+        live.autoScroll?.cancel()
+        live.autoScroll = Task { @MainActor in
+            var held = 0
+            var lastEdge: (Zone, Int)?
+            while !Task.isCancelled, let id = live.source {
+                try? await Task.sleep(for: .milliseconds(150))
+                guard let edge = edge(at: center(live.point)) else { held = 0; lastEdge = nil; continue }
+                if let l = lastEdge, l.0 == edge.0, l.1 == edge.1 { held += 1 } else { held = 1; lastEdge = edge }
+                // Первая прокрутка через ~0,45 с, чтобы не листать, когда целятся в крайний кружок; дальше так же каждые 0,45 с.
+                guard held >= 3 else { continue }
+                held = 0
+                // Блокировка прокрутки на время перетаскивания гасит и прокрутку из кода, поэтому на время сдвига её снимаем.
+                // Палец уже не может подхватить ленту: её жест не начался, пока она была заблокирована.
+                live.autoScrolling = true
+                try? await Task.sleep(for: .milliseconds(30))
+                let moved = scroll(edge.0, by: edge.1)
+                if moved { try? await Task.sleep(for: .milliseconds(350)) }
+                live.autoScrolling = false
+                if moved {
+                    UISelectionFeedbackGenerator().selectionChanged()
+                    let h = target(at: live.point, excluding: id)
+                    if h != live.hovered { live.hovered = h }
+                }
+            }
+        }
+    }
+
+    private func stopAutoScroll() { live.autoScroll?.cancel(); live.autoScroll = nil; live.autoScrolling = false }
+
+    private func edge(at p: CGPoint) -> (Zone, Int)? {
+        for (zone, r) in live.zones where p.y >= r.minY && p.y <= r.maxY {
+            if p.x < r.minX + edgeWidth { return (zone, -1) }
+            if p.x > r.maxX - edgeWidth { return (zone, 1) }
+        }
+        return nil
+    }
+
+    /// Сдвигает зону на шаг. false, если дальше некуда.
+    private func scroll(_ zone: Zone, by step: Int) -> Bool {
+        switch zone {
+        case .income: return shift(.income, items: incomeList.map { ($0.persistentModelID, NodeID.category($0.uuid)) }, by: step)
+        case .accounts: return shift(.accounts, items: accountList.map { ($0.persistentModelID, NodeID.account($0.persistentModelID)) }, by: step)
+        case .expenses:
+            guard let left = live.zones[.expenses]?.minX else { return false }
+            let pages = (expenseList.count + 1 + 7) / 8
+            let first = expenseList.firstIndex { live.frames[.category($0.uuid)].map { $0.midX > left } ?? false } ?? 0
+            let now = first / 8
+            let next = min(max(now + step, 0), max(pages - 1, 0))
+            guard next != now else { return false }
+            live.pageJump = PageJump(page: next)
+            return true
+        }
+    }
+
+    /// В ленте видно 4 ячейки, последняя ячейка «плюс»: левым может стоять кружок не дальше `ids.count + 1 - 4`.
+    /// Текущий левый кружок берём по рамкам на экране: так верно и после ручной прокрутки.
+    private func shift(_ zone: Zone, items: [(id: PersistentIdentifier, node: NodeID)], by step: Int) -> Bool {
+        guard let left = live.zones[zone]?.minX else { return false }
+        let now = items.firstIndex { live.frames[$0.node].map { $0.midX > left } ?? false } ?? 0
+        let next = min(max(now + step, 0), max(items.count + 1 - 4, 0))
+        guard next != now, items.indices.contains(next) else { return false }
+        live.jumps[zone] = ScrollJump(target: items[next].id)
+        return true
     }
 
     // MARK: Монетки
@@ -582,11 +686,16 @@ struct ChaosHomeView: View {
             if let a = account(id) { editingAccount = a } else if let c = category(id) { editingCategory = c }
             return
         }
-        if let a = account(id) { request = AddRequest(type: .expense, from: a) }
+        if let a = account(id) { if a.isLoan { openLoan = a } else { request = AddRequest(type: .expense, from: a) } }
         else if let c = category(id) {
             request = c.isIncome ? AddRequest(type: .income, from: accounts.first, category: c)
                                  : AddRequest(type: .expense, from: accounts.first, category: c)
         }
+    }
+
+    fileprivate struct ZonesKey: PreferenceKey {
+        static let defaultValue: [Zone: CGRect] = [:]
+        static func reduce(value: inout [Zone: CGRect], nextValue: () -> [Zone: CGRect]) { value.merge(nextValue()) { $1 } }
     }
 
     fileprivate struct FramesKey: PreferenceKey {
@@ -610,6 +719,27 @@ struct ChaosHomeView: View {
     @ObservationIgnored var frames: [ChaosHomeView.NodeID: CGRect] = [:]
     /// Группа каждого кружка на время перетаскивания (0 счета, 1 доходы, 2 расходы).
     @ObservationIgnored var groups: [ChaosHomeView.NodeID: Int] = [:]
+    /// Рамки зон (лент и страниц расходов): у их краёв лента листается сама.
+    @ObservationIgnored var zones: [ChaosHomeView.Zone: CGRect] = [:]
+    @ObservationIgnored var autoScroll: Task<Void, Never>?
+    /// Пока идёт сдвиг ленты из кода, блокировка прокрутки снята.
+    var autoScrolling = false
+    /// Куда докрутить ленту или страницы расходов. Запись в `scrollPosition` ленту не двигает, поэтому крутим через `ScrollViewReader`.
+    var jumps: [ChaosHomeView.Zone: ChaosHomeView.ScrollJump] = [:]
+    var pageJump: PageJump?
+}
+
+/// Докручивает ленту, когда перетаскивание просит сдвиг. Отдельный модификатор, чтобы сдвиг не перерисовывал весь экран.
+private struct RibbonJump: ViewModifier {
+    let live: ChaosLive
+    let zone: ChaosHomeView.Zone
+    let proxy: ScrollViewProxy
+    func body(content: Content) -> some View {
+        content.onChange(of: live.jumps[zone]) { _, jump in
+            guard let jump else { return }
+            withAnimation(.easeInOut(duration: 0.3)) { proxy.scrollTo(jump.target, anchor: .leading) }
+        }
+    }
 }
 
 /// Кружок, который едет за пальцем (чуть выше, чтобы палец его не закрывал).
@@ -633,7 +763,7 @@ private struct DragGhost: View {
 /// Пока тащим кружок, ленты и страницы не прокручиваются.
 private struct DragScrollLock: ViewModifier {
     let live: ChaosLive
-    func body(content: Content) -> some View { content.scrollDisabled(live.source != nil) }
+    func body(content: Content) -> some View { content.scrollDisabled(live.source != nil && !live.autoScrolling) }
 }
 
 /// Кнопки «+» бледнеют, пока тащим кружок.
@@ -740,27 +870,42 @@ private struct ChaosNode: View {
     }
 }
 
+struct PageJump: Equatable {
+    let page: Int
+    let id = UUID()
+}
+
 /// Горизонтальные страницы с точками внизу.
 struct PagedStrip<Content: View>: View {
     let count: Int
     var lockScroll = false
+    /// Перелистывание снаружи (кружок держат у края страницы). Читается внутри, чтобы не перерисовывать родителя.
+    var jump: (() -> PageJump?)? = nil
     @ViewBuilder let content: (Int) -> Content
     @State private var page: Int? = 0
 
     var body: some View {
         VStack(spacing: 6) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    ForEach(0 ..< max(count, 1), id: \.self) { i in
-                        content(i).containerRelativeFrame(.horizontal).id(i)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 0) {
+                        ForEach(0 ..< max(count, 1), id: \.self) { i in
+                            content(i).containerRelativeFrame(.horizontal).id(i)
+                        }
                     }
+                    .scrollTargetLayout()
                 }
-                .scrollTargetLayout()
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(id: $page)
+                .scrollClipDisabled()
+                .scrollDisabled(lockScroll)
+                // Запись в `scrollPosition` страницу не двигает, поэтому листаем через `ScrollViewReader`.
+                .onChange(of: jump?()) { _, j in
+                    guard let j else { return }
+                    page = j.page
+                    withAnimation(.easeInOut(duration: 0.3)) { proxy.scrollTo(j.page, anchor: .leading) }
+                }
             }
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $page)
-            .scrollClipDisabled()
-            .scrollDisabled(lockScroll)
             if count > 1 {
                 HStack(spacing: 6) {
                     ForEach(0 ..< count, id: \.self) { i in

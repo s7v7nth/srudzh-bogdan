@@ -32,7 +32,9 @@ enum DemoData {
         lent.debtOwedToMe = true; lent.debtPrincipal = 300; lent.debtDue = cal.date(byAdding: .day, value: 12, to: .now)
         let owed = Account(name: "Sam", currency: "BYN", kind: .debt, sortID: 4)
         owed.debtOwedToMe = false; owed.debtPrincipal = 150; owed.debtDue = cal.date(byAdding: .day, value: -3, to: .now)
-        [byn, usd, credit, lent, owed].forEach(ctx.insert)
+        let car = Account(name: "Car loan", currency: "BYN", kind: .loan, sortID: 5)
+        car.isPrimary = false; car.interestRate = 14; car.debtPrincipal = 6000; car.loanCategoryID = cat("percent")?.uuid
+        [byn, usd, credit, lent, owed, car].forEach(ctx.insert)
 
         func add(_ amount: Decimal, _ type: TxType, _ acc: Account, day: Int, payee: String = "",
                  category: Category? = nil, transfer: UUID? = nil) {
@@ -52,6 +54,17 @@ enum DemoData {
         let repay = UUID()
         add(-100, .transfer, byn, day: 5, transfer: repay)
         add(100, .transfer, credit, day: 5, transfer: repay)
+        add(-4500, .expense, car, day: 90, payee: "Opening balance")
+        let carPay = UUID()
+        add(-250, .transfer, byn, day: 1, transfer: carPay)
+        add(250, .transfer, car, day: 1, transfer: carPay)
+        ctx.insert(RecurringTransaction(amount: -250, type: .transfer, payee: "Car loan",
+                                        nextDate: cal.date(byAdding: .day, value: 29, to: .now)!,
+                                        endDate: cal.date(byAdding: .month, value: 17, to: cal.date(byAdding: .day, value: 29, to: .now)!),
+                                        account: byn, toAccount: car))
+        let loans = Budget(name: "Loans", amount: 250, currency: "BYN", startDate: cal.dateInterval(of: .month, for: .now)!.start)
+        if let c = cat("percent") { loans.categories = [c] }
+        ctx.insert(loans)
         let fx = UUID()
         add(-100, .transfer, usd, day: 2, transfer: fx)
         add(300, .transfer, byn, day: 2, transfer: fx)

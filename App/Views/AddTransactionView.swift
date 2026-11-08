@@ -49,9 +49,10 @@ struct AddTransactionView: View {
     }
 
     init(type: TxType = .expense, toAccount: Account? = nil, fromAccount: Account? = nil, category: Category? = nil,
-         onSaved: (() -> Void)? = nil) {
+         amount: Decimal? = nil, onSaved: (() -> Void)? = nil) {
         self.onSaved = onSaved
         _type = State(initialValue: type)
+        _amountText = State(initialValue: amount.map { "\($0)" } ?? "")
         _toAccount = State(initialValue: toAccount)
         _account = State(initialValue: fromAccount)
         _category = State(initialValue: category)

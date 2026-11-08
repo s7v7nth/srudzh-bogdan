@@ -108,11 +108,17 @@ struct ReportData {
         let byID = Dictionary(uniqueKeysWithValues: categories.map { ($0.uuid.uuidString, $0) })
 
         var flows: [ReportTx] = []
-        for t in counted where t.type != .transfer {
-            if t.category == nil, opening.contains(t.payee) { continue }
+        for t in counted {
+            // Платёж по кредиту (перевод на счёт-кредит) это расход в категории кредита, как в бюджете.
+            // Остальные операции на счёте-кредите (начальный долг, поправки остатка) расходами не считаются.
+            let loanCategory = t.loanPaymentCategory
+            if t.account?.isLoan == true ? loanCategory == nil : t.type == .transfer { continue }
+            if t.category == nil, loanCategory == nil, opening.contains(t.payee) { continue }
             guard let v = rates.value(of: t, in: base) else { continue }
-            let top = t.category.map { $0.parent ?? $0 }
-            flows.append(ReportTx(amount: v, date: t.date, categoryID: top?.uuid, payee: t.payee, account: t.account?.name ?? ""))
+            let category = loanCategory.flatMap { byID[$0.uuidString] } ?? t.category
+            let top = category.map { $0.parent ?? $0 }
+            flows.append(ReportTx(amount: loanCategory == nil ? v : -v, date: t.date, categoryID: top?.uuid,
+                                  payee: t.payee, account: t.account?.name ?? ""))
         }
         return ReportData(base: base, period: period, range: range, previousRange: prevRange, flows: flows,
                           current: Reports.filter(flows, in: range),

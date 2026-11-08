@@ -72,6 +72,10 @@ object BackupCodec {
                     statementDay = a.int("statementDay"),
                     graceDays = a.int("graceDays"),
                     dueDays = a.int("dueDays"),
+                    debtOwedToMe = a.bool("debtOwedToMe"),
+                    debtDue = a.date("debtDue"),
+                    debtPrincipal = a.dec("debtPrincipal"),
+                    loanCategory = a.str("loanCategory"),
                 )
             }
             val categories = root.objects("categories").map { c ->
@@ -161,6 +165,10 @@ object BackupCodec {
                 a.statementDay?.let { put("statementDay", it) }
                 a.graceDays?.let { put("graceDays", it) }
                 a.dueDays?.let { put("dueDays", it) }
+                a.debtOwedToMe?.let { put("debtOwedToMe", it) }
+                a.debtDue?.let { putDate("debtDue", it) }
+                putDec("debtPrincipal", a.debtPrincipal)
+                a.loanCategory?.let { put("loanCategory", it) }
             })
         })
         put("categories", buildJsonArray {
