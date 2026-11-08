@@ -9,6 +9,7 @@ struct BudgetsView: View {
     @Query private var transactions: [LedgerTransaction]
     @State private var showNew = false
     @State private var editing: Budget?
+    @State private var opened: Budget?
 
     var body: some View {
         NavigationStack {
@@ -16,7 +17,10 @@ struct BudgetsView: View {
                 if budgets.isEmpty {
                     ContentUnavailableView("budgets.empty", systemImage: "chart.pie", description: Text("budgets.emptyHint"))
                 }
-                ForEach(budgets) { b in row(b).contentShape(Rectangle()).onTapGesture { editing = b } }.onDelete { for i in $0 { ctx.delete(budgets[i]) }; Haptics.delete() }
+                ForEach(budgets) { b in
+                    row(b).contentShape(Rectangle()).onTapGesture { opened = b }
+                        .contextMenu { Button("common.edit", systemImage: "pencil") { editing = b } }
+                }.onDelete { for i in $0 { ctx.delete(budgets[i]) }; Haptics.delete() }
             }
             .contentMargins(.bottom, 90, for: .scrollContent)
             .navigationTitle("tab.budgets")
@@ -24,6 +28,8 @@ struct BudgetsView: View {
             .toolbar { Button("budgets.add", systemImage: "plus.circle") { showNew = true } }
             .sheet(isPresented: $showNew) { NewBudgetView() }
             .sheet(item: $editing) { NewBudgetView(budget: $0) }
+            // Тап по бюджету открывает его операции; изменить бюджет можно оттуда или долгим нажатием.
+            .navigationDestination(item: $opened) { ActivityView(budget: $0) }
         }
     }
 

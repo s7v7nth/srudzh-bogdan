@@ -6,15 +6,20 @@ struct ActivityView: View {
     @Environment(RatesStore.self) private var rates
     @Query(sort: \LedgerTransaction.date, order: .reverse) private var all: [LedgerTransaction]
     var account: Account? = nil
+    /// Если задан, показываются только операции из категорий бюджета (как он их считает).
+    var budget: Budget? = nil
     @State private var search = ""
     @State private var typeFilter: TxType?
     @State private var editing: LedgerTransaction?
     @State private var editingAccount: Account?
+    @State private var editingBudget: Budget?
 
     /// Один проход по всем операциям вместо трёх отдельных фильтров.
     private var filtered: [LedgerTransaction] {
-        all.filter { t in
+        let budgetCategories: Set<UUID>? = budget.map { b in Set(b.categories.flatMap(\.familyIDs)) }
+        return all.filter { t in
             (account == nil || t.account === account)
+                && (budgetCategories.map { inBudget(t, $0) } ?? true)
                 && (typeFilter == nil || t.type == typeFilter)
                 && (search.isEmpty || t.payee.localizedCaseInsensitiveContains(search)
                     || (t.category?.name.localizedCaseInsensitiveContains(search) ?? false))
@@ -58,18 +63,31 @@ struct ActivityView: View {
         .contentMargins(.bottom, 90, for: .scrollContent)
         // Список сам плавно убирает удалённую строку (и пустой день целиком), а при поиске строки не разъезжаются.
         .animation(search.isEmpty ? Motion.standard : nil, value: list.map(\.persistentModelID))
-        .searchable(text: $search, prompt: Text("activity.search"))
+        // Поле поиска всегда сверху под заголовком: на iOS 26 системное место внизу закрыто нашей панелью вкладок.
+        .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: Text("activity.search"))
         .themedScreen()
-        .navigationTitle(account?.name ?? String(localized: "tab.activity"))
+        .navigationTitle(budget?.name ?? account?.name ?? String(localized: "tab.activity"))
         .toolbar {
             if let account { Button("common.edit") { editingAccount = account } }
+            if let budget { Button("common.edit") { editingBudget = budget } }
         }
         .sheet(item: $editingAccount) { AccountFormView(account: $0, nextSort: $0.sortID) }
+        .sheet(item: $editingBudget) { NewBudgetView(budget: $0) }
         .sheet(item: $editing) { t in
             AddTransactionView(editing: t, partner: t.transferID.flatMap { id in all.first { $0.transferID == id && $0 !== t } })
         }
 
-        if account == nil { NavigationStack { content } } else { content }
+        if account == nil && budget == nil { NavigationStack { content } } else { content }
+    }
+
+    /// Та же логика, что у подсчёта бюджета: траты в его категориях (с подкатегориями) и платежи по кредиту
+    /// в категорию кредита. Бюджет без категорий следит за всеми тратами.
+    private func inBudget(_ t: LedgerTransaction, _ ids: Set<UUID>) -> Bool {
+        guard let a = t.account else { return false }
+        let loanCategory = t.loanPaymentCategory
+        if a.isLoan ? loanCategory == nil : t.type == .transfer { return false }
+        guard let id = loanCategory ?? t.category?.uuid else { return ids.isEmpty }
+        return ids.isEmpty || ids.contains(id)
     }
 
     /// Дата дня и итог за день в основной валюте. Переводы между своими счетами в сумме взаимно гасятся.
