@@ -22,6 +22,7 @@ struct ChaosHomeView: View {
     @State private var live = ChaosLive()
     @State private var request: AddRequest?
     @State private var showSettings = false
+    @State private var showWallet = false
     @State private var showNewAccount = false
     @State private var newCategory: NewCategory?
     @State private var editing = false
@@ -181,7 +182,7 @@ struct ChaosHomeView: View {
                 }
             }
             .background(LongPressDragHost(
-                enabled: isVisible && request == nil && !showSettings && !showNewAccount && newCategory == nil
+                enabled: isVisible && request == nil && !showSettings && !showWallet && !showNewAccount && newCategory == nil
                     && editingAccount == nil && editingCategory == nil && openLoan == nil,
                 onBegan: { p in
                     guard let id = live.frames.first(where: { $0.value.contains(p) })?.key,
@@ -210,6 +211,7 @@ struct ChaosHomeView: View {
                 AddTransactionView(type: r.type, toAccount: r.to, fromAccount: r.from, category: r.category, amount: r.amount) { dropSaved = true }
             }
             .sheet(isPresented: $showSettings) { SettingsView() }
+            .sheet(isPresented: $showWallet) { WalletView() }
             .sheet(isPresented: $showNewAccount) { AccountFormView(nextSort: accounts.count) }
             .sheet(item: $newCategory) { CategoryFormView(isIncome: $0.isIncome) }
             .sheet(item: $editingAccount) { AccountFormView(account: $0, nextSort: $0.sortID) }
@@ -229,6 +231,8 @@ struct ChaosHomeView: View {
         HStack {
             Button { showSettings = true } label: { Image(systemName: "gearshape").font(.app(.title3)).frame(width: 44, height: 44, alignment: .leading) }
                 .accessibilityLabel(Text("settings.title"))
+            Button { showWallet = true } label: { Image(systemName: "wallet.pass").font(.app(.title3)).frame(width: 44, height: 44) }
+                .accessibilityLabel(Text("wallet.title"))
             Spacer(minLength: 8)
             // Полный баннер не помещается: экран рассчитан ровно на высоту телефона и вылезал под часы и панель вкладок.
             BackupBanner(compact: true)

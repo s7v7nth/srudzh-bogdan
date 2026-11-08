@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import LedgerCore
 
 /// Всё содержимое приложения в одном файле. Счета ссылаются друг на друга по номеру, категории по UUID.
 /// Суммы хранятся строками, чтобы при чтении JSON не терялись копейки.
@@ -17,6 +18,8 @@ struct BackupSnapshot: Codable {
     var plan: [PlanDTO] = []
     var cardAliases: [CardAliasDTO] = []
     var payeeAliases: [PayeeAliasDTO] = []
+    /// Необязательно: в копиях до кошелька карт этого поля нет.
+    var loyaltyCards: [LoyaltyCardDTO]?
 
     struct Settings: Codable {
         var baseCurrency: String
@@ -99,6 +102,10 @@ struct BackupSnapshot: Codable {
 
     struct CardAliasDTO: Codable { var last4: String; var account: Int? }
     struct PayeeAliasDTO: Codable { var key, original, name: String }
+    struct LoyaltyCardDTO: Codable {
+        var uuid: UUID; var name, number, format, background, titleColor, note: String
+        var created: Date; var lastUsed: Date?; var useCount: Int
+    }
 }
 
 private func str(_ d: Decimal) -> String { "\(d)" }
@@ -163,6 +170,11 @@ extension BackupSnapshot {
         }
         s.cardAliases = try ctx.fetch(FetchDescriptor<CardAlias>()).map { CardAliasDTO(last4: $0.last4, account: acc($0.account)) }
         s.payeeAliases = try ctx.fetch(FetchDescriptor<PayeeAlias>()).map { PayeeAliasDTO(key: $0.key, original: $0.original, name: $0.name) }
+        s.loyaltyCards = try ctx.fetch(FetchDescriptor<LoyaltyCard>(sortBy: [SortDescriptor(\.created)])).map {
+            LoyaltyCardDTO(uuid: $0.uuid, name: $0.name, number: $0.number, format: $0.formatRaw,
+                           background: $0.background, titleColor: $0.titleColor, note: $0.note,
+                           created: $0.created, lastUsed: $0.lastUsed, useCount: $0.useCount)
+        }
         return s
     }
 
@@ -188,6 +200,7 @@ extension BackupSnapshot {
         try ctx.delete(model: PlanItem.self)
         try ctx.delete(model: CardAlias.self)
         try ctx.delete(model: PayeeAlias.self)
+        try ctx.delete(model: LoyaltyCard.self)
         try ctx.delete(model: Account.self)
         try ctx.delete(model: Category.self)
         try ctx.save()
@@ -242,6 +255,12 @@ extension BackupSnapshot {
         }
         for c in cardAliases { ctx.insert(CardAlias(last4: c.last4, account: acc(c.account))) }
         for p in payeeAliases { ctx.insert(PayeeAlias(key: p.key, original: p.original, name: p.name)) }
+        for c in loyaltyCards ?? [] {
+            let m = LoyaltyCard(name: c.name, number: c.number, format: BarcodeFormat(rawValue: c.format) ?? .code128,
+                                background: c.background, titleColor: c.titleColor)
+            m.uuid = c.uuid; m.note = c.note; m.created = c.created; m.lastUsed = c.lastUsed; m.useCount = c.useCount
+            ctx.insert(m)
+        }
         try ctx.save()
 
         let ud = UserDefaults.standard

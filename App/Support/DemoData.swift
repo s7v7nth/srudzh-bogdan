@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import SwiftData
+import LedgerCore
 
 /// Только для разработки: запуск с аргументом -seedDemo наполняет базу примерами.
 enum DemoData {
@@ -35,6 +36,11 @@ enum DemoData {
         let car = Account(name: "Car loan", currency: "BYN", kind: .loan, sortID: 5)
         car.isPrimary = false; car.interestRate = 14; car.debtPrincipal = 6000; car.loanCategoryID = cat("percent")?.uuid
         [byn, usd, credit, lent, owed, car].forEach(ctx.insert)
+        for (name, number, format, bg, fg) in [("Shop One", "5901234123457", BarcodeFormat.ean13, "3A3B3D", "8CC63F"),
+                                               ("Market", "948200001089221", .qr, "F86602", "FFFFFF"),
+                                               ("Hardware", "AB-12345", .code128, "1F4FA0", "FFD23F")] {
+            ctx.insert(LoyaltyCard(name: name, number: number, format: format, background: bg, titleColor: fg))
+        }
 
         func add(_ amount: Decimal, _ type: TxType, _ acc: Account, day: Int, payee: String = "",
                  category: Category? = nil, transfer: UUID? = nil) {

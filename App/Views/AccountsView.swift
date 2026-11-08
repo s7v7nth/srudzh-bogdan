@@ -8,6 +8,7 @@ struct AccountsView: View {
     @Query(sort: \Account.sortID) private var accounts: [Account]
     @State private var showNew = false
     @State private var showSettings = false
+    @State private var showWallet = false
     @State private var includePending = true
     @State private var editing: Account?
     @State private var toDelete: Account?
@@ -92,11 +93,13 @@ struct AccountsView: View {
             .themedScreen()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("settings.title", systemImage: "gearshape") { showSettings = true } }
+                ToolbarItem(placement: .topBarLeading) { Button("wallet.title", systemImage: "wallet.pass") { showWallet = true } }
                 ToolbarItem(placement: .topBarTrailing) { Button("accounts.add", systemImage: "plus.circle") { showNew = true } }
             }
             .sheet(isPresented: $showNew) { AccountFormView(nextSort: accounts.count) }
             .sheet(item: $editing) { AccountFormView(account: $0, nextSort: $0.sortID) }
             .sheet(isPresented: $showSettings) { SettingsView() }
+            .sheet(isPresented: $showWallet) { WalletView() }
             .confirmationDialog("account.deleteTitle", isPresented: Binding(get: { toDelete != nil }, set: { if !$0 { toDelete = nil } }), titleVisibility: .visible) {
                 Button("common.delete", role: .destructive) { if let a = toDelete { ctx.delete(a); Haptics.delete() }; toDelete = nil }
             } message: { Text("account.deleteMessage") }

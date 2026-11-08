@@ -158,6 +158,31 @@ extension LedgerTransaction {
     }
 }
 
+/// Скидочная или бонусная карта магазина в кошельке. Цвета хранятся строкой «RRGGBB».
+@Model final class LoyaltyCard {
+    var uuid: UUID = UUID()
+    var name: String = ""
+    /// Что зашито в код: номер карты или строка из QR.
+    var number: String = ""
+    var formatRaw: String = "code128"
+    var background: String = "3A3A3C"
+    var titleColor: String = "FFFFFF"
+    var note: String = ""
+    var created: Date = Date()
+    var lastUsed: Date?
+    var useCount: Int = 0
+
+    init(name: String, number: String, format: BarcodeFormat, background: String, titleColor: String) {
+        self.name = name; self.number = number; self.formatRaw = format.rawValue
+        self.background = background; self.titleColor = titleColor
+    }
+
+    var format: BarcodeFormat {
+        get { BarcodeFormat(rawValue: formatRaw) ?? .code128 }
+        set { formatRaw = newValue.rawValue }
+    }
+}
+
 /// Привязка «карта ••8780 → счёт в приложении».
 @Model final class CardAlias {
     var last4: String
@@ -234,7 +259,8 @@ extension LedgerTransaction {
 
 enum Seed {
     static let schema = Schema([Account.self, Category.self, LedgerTransaction.self, Budget.self,
-                                RecurringTransaction.self, PlanItem.self, CardAlias.self, PayeeAlias.self])
+                                RecurringTransaction.self, PlanItem.self, CardAlias.self, PayeeAlias.self,
+                                LoyaltyCard.self])
 
     /// Стандартный набор создаётся на языке интерфейса и дальше принадлежит пользователю.
     static func run(_ ctx: ModelContext) {

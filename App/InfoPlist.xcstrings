@@ -1,6 +1,23 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "NSCameraUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The camera reads the code and colors of your store cards."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Камера нужна, чтобы прочитать код и цвета скидочной карты."
+          }
+        }
+      }
+    },
     "NSFaceIDUsageDescription": {
       "extractionState": "manual",
       "localizations": {

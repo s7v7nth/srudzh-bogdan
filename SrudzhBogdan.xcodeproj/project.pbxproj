@@ -56,9 +56,11 @@
 		BC40E0321B7EB70701AEE107 /* BreakdownReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D2B4EC7804F263B1BB43FD /* BreakdownReport.swift */; };
 		BD4AF336DF79A2F82F8CD785 /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DD58E1BBB838ACC99D9B814C /* Manrope-SemiBold.ttf */; };
 		C307F1B394F602130D5DDC51 /* MainTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFF74E8ED197BCCE91D6B28 /* MainTabs.swift */; };
+		C42945FAAD5D79D495FA153E /* BarcodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13A01FEE9849AAC592B458E2 /* BarcodeView.swift */; };
 		C55082B9FAF7991EF3819C15 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9848C314B59188CBC776409 /* ReportsView.swift */; };
 		CA4C86C95113C7D806A810FB /* OnboardingComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1A130331EC13BDF9D08A24 /* OnboardingComponents.swift */; };
 		CAEE9CECAD3E1631877D8E56 /* OnboardingDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7E0E3ACF8C363BF78604622 /* OnboardingDraft.swift */; };
+		D07E9EAF4F96626769C69CD6 /* CardRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCCDB91134A3648020BB3632 /* CardRecognizer.swift */; };
 		D095A242A745AFEB1F2E0E5E /* CompareReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F058AACFF8A0280BF5963EA /* CompareReport.swift */; };
 		D58EE99DF25A92F70494A03C /* rates-seed.json in Resources */ = {isa = PBXBuildFile; fileRef = 18494931F0654057D89E11B7 /* rates-seed.json */; };
 		D605F3926D64410EA727AFEA /* CreditLineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB6E4A0AE5E47599BD66E84 /* CreditLineView.swift */; };
@@ -71,6 +73,7 @@
 		EF287645F5BDCD847A1505B0 /* OnbKeyboardTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8ED851E01F794E89544B79A /* OnbKeyboardTools.swift */; };
 		F072D2F6659F8F6CDF5546D1 /* NetWorthReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BE0BBF4776D0237C7ED6692 /* NetWorthReport.swift */; };
 		F2AE89392B15A22B3A1BD3F8 /* Helpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6D434917266A6E854F1C29 /* Helpers.swift */; };
+		FF5CE1090A6442A87CDE851B /* WalletViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C9F5F5E25A45934542BF72E /* WalletViews.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -79,6 +82,7 @@
 		08C156CADCD98F8D04E0926A /* RatesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatesStore.swift; sourceTree = "<group>"; };
 		0DE49C5F87E4C13A20CE213E /* Manrope-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Bold.ttf"; sourceTree = "<group>"; };
 		116762DDB3717726FF052BA5 /* OnbBudgetStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbBudgetStep.swift; sourceTree = "<group>"; };
+		13A01FEE9849AAC592B458E2 /* BarcodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeView.swift; sourceTree = "<group>"; };
 		18494931F0654057D89E11B7 /* rates-seed.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "rates-seed.json"; sourceTree = "<group>"; };
 		1D61E38F37A4A91CC3C65B10 /* OnbImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbImportSheet.swift; sourceTree = "<group>"; };
 		1DD494458B2437F46296E69E /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
@@ -86,6 +90,7 @@
 		1EC1794F2968F62B6BFDE050 /* EveningViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningViews.swift; sourceTree = "<group>"; };
 		2ABC24B25DDA3CD2B7922F81 /* ReportData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportData.swift; sourceTree = "<group>"; };
 		2BE0BBF4776D0237C7ED6692 /* NetWorthReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetWorthReport.swift; sourceTree = "<group>"; };
+		2C9F5F5E25A45934542BF72E /* WalletViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletViews.swift; sourceTree = "<group>"; };
 		3722539025B0D4D95AB3C712 /* SMSViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMSViews.swift; sourceTree = "<group>"; };
 		37C5F964276E72BFE4ABEB12 /* ImportStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportStyle.swift; sourceTree = "<group>"; };
 		3C5445C12652777479C5DE14 /* OnbCategoriesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbCategoriesStep.swift; sourceTree = "<group>"; };
@@ -121,6 +126,7 @@
 		B8DC85C7337A7C9C61B75FCB /* OnbWelcomeAccountsSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnbWelcomeAccountsSteps.swift; sourceTree = "<group>"; };
 		B9D2B4EC7804F263B1BB43FD /* BreakdownReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakdownReport.swift; sourceTree = "<group>"; };
 		BCB6E4A0AE5E47599BD66E84 /* CreditLineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditLineView.swift; sourceTree = "<group>"; };
+		BCCDB91134A3648020BB3632 /* CardRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardRecognizer.swift; sourceTree = "<group>"; };
 		BD6D434917266A6E854F1C29 /* Helpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Helpers.swift; sourceTree = "<group>"; };
 		D7E0E3ACF8C363BF78604622 /* OnboardingDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingDraft.swift; sourceTree = "<group>"; };
 		D9058CC94FE0D09A4F16C987 /* SMSImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMSImporter.swift; sourceTree = "<group>"; };
@@ -217,7 +223,9 @@
 				E276533EE652F5D6E9FA334B /* AppLock.swift */,
 				EBD13BAF44A7D1F74C6BA408 /* AutoBackup.swift */,
 				945B4964B058A1FC2B096C57 /* BackupSnapshot.swift */,
+				13A01FEE9849AAC592B458E2 /* BarcodeView.swift */,
 				1EB149F315CE7E75045F008F /* BynSign.swift */,
+				BCCDB91134A3648020BB3632 /* CardRecognizer.swift */,
 				6917E5981413DB7B417666E9 /* Currencies.swift */,
 				A3960D8506A9E562BEB020BD /* DemoData.swift */,
 				AABD1059774D7CEEAA0AC074 /* EveningNotifier.swift */,
@@ -252,6 +260,7 @@
 				E9E3FBE61BF7FB8C7E720735 /* ScheduledView.swift */,
 				F8ADE1D9A99662E7AFDDE7F7 /* SettingsViews.swift */,
 				3722539025B0D4D95AB3C712 /* SMSViews.swift */,
+				2C9F5F5E25A45934542BF72E /* WalletViews.swift */,
 				D1D8029BE1EAD868A7E63822 /* Onboarding */,
 				8C65CB215C32CA163E34E8EC /* Reports */,
 			);
@@ -386,10 +395,12 @@
 				28E018059A9B63E7274EB217 /* AutoBackup.swift in Sources */,
 				4DDCB5EB55DFF6A64BB9528B /* BackupSnapshot.swift in Sources */,
 				52AC6D24932ECAA518D48A10 /* BackupViews.swift in Sources */,
+				C42945FAAD5D79D495FA153E /* BarcodeView.swift in Sources */,
 				BC40E0321B7EB70701AEE107 /* BreakdownReport.swift in Sources */,
 				15D4256FF03AF71236FBCE3E /* BudgetsReport.swift in Sources */,
 				A9ECCB9544F32E1A04AEF702 /* BudgetsView.swift in Sources */,
 				2C645D13BA129B2E913815C5 /* BynSign.swift in Sources */,
+				D07E9EAF4F96626769C69CD6 /* CardRecognizer.swift in Sources */,
 				717E13B13927A1BA7C9E9E86 /* CategoryViews.swift in Sources */,
 				949597662E974215927E150D /* ChaosHomeView.swift in Sources */,
 				D095A242A745AFEB1F2E0E5E /* CompareReport.swift in Sources */,
@@ -433,6 +444,7 @@
 				0A6EDF96A8BD4F47CDF2E89B /* SettingsViews.swift in Sources */,
 				042F3BC2963AE7C23BFE8054 /* SrudzhBogdanApp.swift in Sources */,
 				61145A775359E1219FE45B73 /* Style.swift in Sources */,
+				FF5CE1090A6442A87CDE851B /* WalletViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -448,6 +460,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Срудж Богдан";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The camera reads the code and colors of your store cards.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID keeps your finances away from prying eyes.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -535,6 +548,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Срудж Богдан";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The camera reads the code and colors of your store cards.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID keeps your finances away from prying eyes.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
