@@ -131,7 +131,7 @@ struct AddTransactionView: View {
                 }
             }
             .overlay {
-                if saved { SavedBadge(tint: type.tint).transition(.scale(scale: 0.5).combined(with: .opacity)) }
+                if saved { SavedBadge(tint: type.tint).transition(.scale(scale: 0.92).combined(with: .opacity)) }
             }
         }
     }
@@ -173,12 +173,12 @@ struct AddTransactionView: View {
 
     private func fail() { errorTick += 1; Haptics.error() }
 
-    /// Показывает галочку и закрывает окно, когда она успела подпрыгнуть.
+    /// Показывает галочку и закрывает окно, как только она проявилась.
     private func finish() {
         Haptics.success()
         onSaved?()
-        withAnimation(.spring(duration: 0.3, bounce: 0.4)) { saved = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { dismiss() }
+        withAnimation(Motion.quick) { saved = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { dismiss() }
     }
 
     /// Правит операцию на месте; у перевода обновляются обе половинки.

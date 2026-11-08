@@ -119,7 +119,7 @@ struct OnbImportSheet: View {
         }
         .background(Theme.bg.ignoresSafeArea())
         .fileImporter(isPresented: $picking, allowedContentTypes: [.commaSeparatedText, .plainText]) { result in
-            if model.load(result) { withAnimation(.snappy) { stage = .columns } }
+            if model.load(result) { withAnimation(Motion.standard) { stage = .columns } }
         }
         .interactiveDismissDisabled()
     }
@@ -139,7 +139,7 @@ struct OnbImportSheet: View {
     }
 
     private func back() {
-        withAnimation(.snappy) { stage = stage == .review ? .columns : .pick }
+        withAnimation(Motion.standard) { stage = stage == .review ? .columns : .pick }
     }
 
     private var footer: some View {
@@ -170,7 +170,7 @@ struct OnbImportSheet: View {
     private func advance() {
         switch stage {
         case .pick: picking = true
-        case .columns: withAnimation(.snappy) { stage = .review }
+        case .columns: withAnimation(Motion.standard) { stage = .review }
         case .review: onDone(model.ledger); dismiss()
         }
     }

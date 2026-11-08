@@ -11,7 +11,7 @@ struct OnbCategoriesStep: View {
             OnbHeader(icon: "square.grid.2x2", title: "onb.cats.title", subtitle: "onb.cats.subtitle")
             HStack(spacing: 8) {
                 ForEach([(1, "onb.cats.minimal"), (2, "onb.cats.standard"), (3, "onb.cats.detailed")], id: \.0) { level, title in
-                    Button { withAnimation(.snappy) { draft.setLevel(level) } } label: {
+                    Button { withAnimation(Motion.standard) { draft.setLevel(level) } } label: {
                         Text(LocalizedStringKey(title)).onbChip(selected: draft.level == level)
                     }.buttonStyle(.plain)
                 }
@@ -58,7 +58,7 @@ struct OnbCategoriesStep: View {
         return HStack(spacing: 12) {
             Button {
                 guard !required else { return }
-                withAnimation(.snappy) { draft.categories[i].enabled.toggle() }
+                withAnimation(Motion.standard) { draft.categories[i].enabled.toggle() }
             } label: {
                 HStack(spacing: 12) {
                     OnbCatBadge(icon: c.icon, color: c.color, size: 34)

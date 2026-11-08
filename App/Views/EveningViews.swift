@@ -21,7 +21,7 @@ struct OnbEveningStep: View {
             OnbHeader(icon: "moon.stars", title: "digest.step.title", subtitle: "digest.step.subtitle")
             EveningPreview(currency: currency)
             OnbCard {
-                Toggle(isOn: $notifier.enabled.animation(.snappy)) { Text("digest.toggle").font(.app(.body, .semibold)) }
+                Toggle(isOn: $notifier.enabled.animation(Motion.quick)) { Text("digest.toggle").font(.app(.body, .semibold)) }
                     .tint(Theme.brand)
                 if notifier.enabled {
                     Divider().overlay(.white.opacity(0.06))

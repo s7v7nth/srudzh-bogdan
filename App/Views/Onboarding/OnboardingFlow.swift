@@ -181,7 +181,7 @@ struct OnboardingFlow: View {
         guard let at = steps.firstIndex(of: step), steps.indices.contains(at + delta) else { return }
         let next = steps[at + delta]
         goingForward = delta > 0
-        withAnimation(.snappy(duration: 0.3)) { step = next }
+        withAnimation(Motion.standard) { step = next }
     }
 
     private func finish() {

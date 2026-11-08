@@ -217,7 +217,7 @@ struct ChaosHomeView: View {
             BackupBanner(compact: true)
             Spacer(minLength: 8)
             Button {
-                withAnimation(.spring(duration: 0.25)) { editing.toggle() }
+                withAnimation(Motion.standard) { editing.toggle() }
             } label: {
                 Text(editing ? "common.done" : "chaos.edit").font(.app(.subheadline, .semibold))
                     .padding(.horizontal, 14).frame(height: 34)
@@ -248,7 +248,6 @@ struct ChaosHomeView: View {
                 Text(showAll ? "chaos.balance.all" : "chaos.balance").font(.app(.caption)).foregroundStyle(.secondary)
                 MoneyText(amount: worth, code: rates.base).font(.system(size: 34, weight: .bold))
                     .foregroundStyle(worth < 0 ? TxType.expense.tint : Color.primary)
-                    .contentTransition(.numericText())
                 if showAll {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 14) {
@@ -286,10 +285,10 @@ struct ChaosHomeView: View {
             .background(showAll ? Color.accentColor : Color.secondary.opacity(0.15), in: Circle())
             .padding(.top, 8).padding(.trailing, 20)
             .contentShape(Circle())
-            .overlay(HoldCatcher { pressed in withAnimation(.snappy(duration: 0.2)) { showAll = pressed } })
+            .overlay(HoldCatcher { pressed in withAnimation(Motion.quick) { showAll = pressed } })
             .accessibilityLabel(Text("chaos.balance.showAll"))
             .accessibilityAddTraits(.isButton)
-            .accessibilityAction { withAnimation { showAll.toggle() } }
+            .accessibilityAction { withAnimation(Motion.quick) { showAll.toggle() } }
             .sensoryFeedback(.selection, trigger: showAll)
     }
 
@@ -536,7 +535,7 @@ struct ChaosHomeView: View {
         }
         let end = held.flatMap { budgetRatio(of: $0.0) }
         if reduceMotion || !goldRain {
-            if let (c, _) = held { withAnimation(.snappy) { live.rings[c.uuid] = nil } }
+            if let (c, _) = held { withAnimation(Motion.standard) { live.rings[c.uuid] = nil } }
             return
         }
         flight = CoinFlight(from: from, to: to, count: 9, category: held?.0.uuid, start: held?.1 ?? 0, end: end ?? 0)
@@ -548,7 +547,7 @@ struct ChaosHomeView: View {
         Haptics.coin()
         if let u = f.category {
             let k = Double(index + 1) / Double(f.count)
-            withAnimation(.snappy(duration: 0.2)) { live.rings[u] = f.start + (f.end - f.start) * k }
+            withAnimation(Motion.quick) { live.rings[u] = f.start + (f.end - f.start) * k }
         }
         if index == f.count - 1 {
             if let u = f.category { live.rings[u] = nil }
@@ -567,7 +566,7 @@ struct ChaosHomeView: View {
         guard let from = ids.firstIndex(of: source), let to = ids.firstIndex(of: target) else { return }
         var order = ids
         order.remove(at: from); order.insert(source, at: to)
-        withAnimation(.spring(duration: 0.3)) {
+        withAnimation(Motion.standard) {
             for (i, id) in order.enumerated() {
                 if let a = account(id) { a.sortID = i } else if let c = category(id) { c.sortID = i }
             }
@@ -686,10 +685,10 @@ private struct ChaosNode: View {
                 .frame(height: 15)
             bubble(ring: progress == nil ? nil : uuid.flatMap { live.rings[$0] })
                 .opacity(zero && progress == nil ? 0.7 : 1)
-                .scaleEffect(isHover ? 1.2 : (isSource ? 0.9 : 1))
-                .overlay { if isHover { Circle().stroke(color, lineWidth: 3).frame(width: circle + 12, height: circle + 12).scaleEffect(1.2).blur(radius: 1) } }
+                .scaleEffect(isHover ? 1.08 : (isSource ? 0.94 : 1))
+                .overlay { if isHover { Circle().stroke(color, lineWidth: 3).frame(width: circle + 20, height: circle + 20) } }
                 .overlay(alignment: .topLeading) { if editing { hideBadge } }
-                .animation(.spring(duration: 0.25), value: isHover)
+                .animation(Motion.quick, value: isHover)
             // Пустая категория: прочерк вместо ряда «0,00», чтобы взгляд цеплялся только за реальные траты.
             if zero, case .category = id {
                 Text(verbatim: "—").font(.app(.caption, .bold)).foregroundStyle(text).opacity(0.4)
@@ -705,7 +704,6 @@ private struct ChaosNode: View {
         .background(GeometryReader { g in
             Color.clear.preference(key: ChaosHomeView.FramesKey.self, value: [id: g.frame(in: .named(space))])
         })
-        .modifier(JiggleEffect(active: editing, seed: id.hashValue))
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
         .accessibilityElement(children: .combine)
@@ -887,27 +885,6 @@ struct LongPressDragHost: UIViewRepresentable {
 }
 
 
-/// Покачивание кружков в режиме правки, как у иконок на рабочем столе iOS:
-/// быстрый лёгкий наклон до 1,8° с микросмещением; у каждого кружка свой момент старта.
-private struct JiggleEffect: ViewModifier {
-    let active: Bool
-    let seed: Int
-    @State private var swing = false
-
-    private var delay: Double { Double(UInt(bitPattern: seed) % 1000) / 1000 * 0.15 }
-
-    func body(content: Content) -> some View {
-        content
-            .rotationEffect(.degrees(active && swing ? 1.8 : 0))
-            .offset(x: active && swing ? 0.5 : 0, y: active && swing ? -1.0 : 0)
-            .animation(
-                active ? .linear(duration: 0.12).repeatForever(autoreverses: true).delay(delay) : .default,
-                value: swing
-            )
-            .onChange(of: active, initial: true) { _, on in swing = on }
-    }
-}
-
 // MARK: Монетки между кружками
 
 struct CoinFlight: Identifiable {
@@ -921,7 +898,7 @@ struct CoinFlight: Identifiable {
     let end: Double
 }
 
-/// Горсть монеток: вылетают из кружка-источника по очереди и дугой падают в получателя.
+/// Горсть монеток: вылетают из кружка-источника по очереди и одной ровной дугой падают в получателя.
 private struct CoinShower: View {
     let flight: CoinFlight
     let onLand: (Int) -> Void
@@ -930,8 +907,7 @@ private struct CoinShower: View {
         ZStack {
             ForEach(0..<flight.count, id: \.self) { i in
                 Coin(from: flight.from, to: flight.to,
-                     bend: CGFloat.random(in: -40...40), lift: CGFloat.random(in: 70...120),
-                     delay: Double(i) * 0.07, spin: Double.random(in: 360...720)) { onLand(i) }
+                     lift: 80, delay: Double(i) * 0.05) { onLand(i) }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -941,10 +917,8 @@ private struct CoinShower: View {
 private struct Coin: View {
     let from: CGPoint
     let to: CGPoint
-    let bend: CGFloat
     let lift: CGFloat
     let delay: Double
-    let spin: Double
     let onLand: () -> Void
     @State private var t: CGFloat = 0
 
@@ -954,21 +928,19 @@ private struct Coin: View {
             .overlay(Circle().strokeBorder(ChaosPalette.coinRim, lineWidth: 1.5).padding(3))
             .frame(width: 18, height: 18)
             .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
-            .modifier(ArcFlight(t: t, from: from, to: to, bend: bend, lift: lift, spin: spin))
+            .modifier(ArcFlight(t: t, from: from, to: to, lift: lift))
             .onAppear {
-                withAnimation(.timingCurve(0.35, 0, 0.75, 1, duration: 0.6).delay(delay)) { t = 1 } completion: { onLand() }
+                withAnimation(.timingCurve(0.4, 0, 0.6, 1, duration: 0.42).delay(delay)) { t = 1 } completion: { onLand() }
             }
     }
 }
 
-/// Положение монетки на дуге (квадратичная кривая через точку над серединой пути), с переворотом и уменьшением в конце.
+/// Положение монетки на дуге (квадратичная кривая через точку над серединой пути), с уменьшением в конце.
 private struct ArcFlight: ViewModifier, Animatable {
     var t: CGFloat
     let from: CGPoint
     let to: CGPoint
-    let bend: CGFloat
     let lift: CGFloat
-    let spin: Double
 
     var animatableData: CGFloat {
         get { t }
@@ -976,13 +948,12 @@ private struct ArcFlight: ViewModifier, Animatable {
     }
 
     func body(content: Content) -> some View {
-        let c = CGPoint(x: (from.x + to.x) / 2 + bend, y: min(from.y, to.y) - lift)
+        let c = CGPoint(x: (from.x + to.x) / 2, y: min(from.y, to.y) - lift)
         let u = 1 - t
         let p = CGPoint(x: u * u * from.x + 2 * u * t * c.x + t * t * to.x,
                         y: u * u * from.y + 2 * u * t * c.y + t * t * to.y)
         let scale = t < 0.15 ? 0.5 + t / 0.15 * 0.5 : (t > 0.8 ? 1 - (t - 0.8) / 0.2 * 0.5 : 1)
         content
-            .rotation3DEffect(.degrees(spin * Double(t)), axis: (x: 0, y: 1, z: 0))
             .scaleEffect(scale)
             .opacity(t <= 0 || t >= 1 ? 0 : 1)
             .position(p)

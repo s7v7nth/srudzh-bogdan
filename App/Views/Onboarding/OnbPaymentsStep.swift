@@ -26,7 +26,7 @@ struct OnbPaymentsStep<Header: View>: View {
                                showRemaining: showRemaining, onEnable: onEnable) { items.removeAll { $0.id == p.id } }
             }
             Button {
-                withAnimation(.snappy) { items.append(PaymentDraft(custom: customCategory, icon: customIcon)) }
+                withAnimation(Motion.standard) { items.append(PaymentDraft(custom: customCategory, icon: customIcon)) }
             } label: {
                 Label(addTitle, systemImage: "plus.circle.fill").font(.app(.subheadline, .semibold))
             }
@@ -57,7 +57,7 @@ struct OnbPaymentCard: View {
     var body: some View {
         OnbCard {
             Button {
-                withAnimation(.snappy) { p.enabled.toggle() }
+                withAnimation(Motion.standard) { p.enabled.toggle() }
                 if p.enabled { onEnable(p) }
             } label: {
                 HStack(spacing: 12) {
@@ -182,7 +182,7 @@ struct OnbLoansStep: View {
                     }
                 }
                 Button {
-                    withAnimation(.snappy) { draft.credits.append(CreditDraft()) }
+                    withAnimation(Motion.standard) { draft.credits.append(CreditDraft()) }
                 } label: {
                     Label("onb.credit.add", systemImage: "plus.circle.fill").font(.app(.subheadline, .semibold))
                 }

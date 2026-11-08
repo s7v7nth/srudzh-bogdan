@@ -39,11 +39,11 @@ struct AccountsView: View {
             .background(showAll ? Color.accentColor : Color.secondary.opacity(0.15), in: Circle())
             .contentShape(Circle())
             .gesture(DragGesture(minimumDistance: 0)
-                .onChanged { _ in if !showAll { withAnimation(.snappy(duration: 0.2)) { showAll = true } } }
-                .onEnded { _ in withAnimation(.snappy(duration: 0.2)) { showAll = false } })
+                .onChanged { _ in if !showAll { withAnimation(Motion.quick) { showAll = true } } }
+                .onEnded { _ in withAnimation(Motion.quick) { showAll = false } })
             .accessibilityLabel(Text("chaos.balance.showAll"))
             .accessibilityAddTraits(.isButton)
-            .accessibilityAction { withAnimation { showAll.toggle() } }
+            .accessibilityAction { withAnimation(Motion.quick) { showAll.toggle() } }
             .sensoryFeedback(.selection, trigger: showAll)
     }
 
@@ -57,7 +57,6 @@ struct AccountsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(showAll ? "accounts.totalAll" : "accounts.total").font(.app(.caption, .bold)).tracking(1.2).textCase(.uppercase).foregroundStyle(.secondary)
                             MoneyText(amount: n.total, code: rates.base, colored: true, tabular: false, weight: .heavy).font(.manrope(40, .heavy, relativeTo: .largeTitle))
-                                .contentTransition(.numericText())
                         }
                         Spacer(minLength: 8)
                         showAllButton

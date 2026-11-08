@@ -3,6 +3,17 @@ import SwiftData
 import CoreText
 import LedgerCore
 
+/// Единый ритм движения. Все анимации без отскока: элемент приезжает и встаёт на место.
+/// Двигается только то, что тронул пользователь; данные при открытии экрана появляются сразу.
+enum Motion {
+    /// Отклик на касание: переключатели, подсветка, мелкие появления.
+    static let quick = Animation.spring(duration: 0.18, bounce: 0)
+    /// Обычная смена состояния: раскрытие, перестановка, смена шага.
+    static let standard = Animation.spring(duration: 0.28, bounce: 0)
+    /// Крупное движение: перелёт между экранами.
+    static let large = Animation.spring(duration: 0.36, bounce: 0)
+}
+
 /// Единый «язык» интерфейса: у каждого типа операции свой цвет и своя иконка везде в приложении.
 /// Расход красный со стрелкой вниз, доход зелёный со стрелкой вверх, перевод синий со стрелками туда-сюда.
 /// Цвета дизайн-системы «тёмный премиум». Приложение всегда тёмное; светлые значения нужны на случай возврата к системной теме.
@@ -183,7 +194,7 @@ struct CapsuleBar: ProgressViewStyle {
     }
 }
 
-/// Полоса наполняется от нуля при появлении и плавно доезжает до нового значения при изменении.
+/// Полоса сразу показывает значение и плавно доезжает до нового при изменении.
 private struct CapsuleFill: View {
     let value: Double
     let tint: Color
@@ -198,90 +209,23 @@ private struct CapsuleFill: View {
             }
         }
         .frame(maxWidth: .infinity).frame(height: 8)
-        .onAppear {
-            if reduceMotion { shown = value } else { withAnimation(.spring(duration: 0.8, bounce: 0.15).delay(0.1)) { shown = value } }
+        .onAppear { shown = value }
+        .onChange(of: value) {
+            if reduceMotion { shown = value } else { withAnimation(Motion.standard) { shown = value } }
         }
-        .onChange(of: value) { withAnimation(.snappy) { shown = value } }
     }
-}
-
-/// Однократная тряска при появлении, если `active`: так выделяется превышенный бюджет.
-struct NudgeOnAppear: ViewModifier {
-    let active: Bool
-    @State private var phase: CGFloat = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func body(content: Content) -> some View {
-        content.modifier(ShakeEffect(animatableData: phase))
-            .onAppear {
-                guard active, !reduceMotion, phase == 0 else { return }
-                withAnimation(.linear(duration: 0.45).delay(0.8)) { phase = 1 }
-            }
-    }
-}
-
-/// График проявляется слева направо при открытии и заново при каждой смене `trigger` (период, разрез, горизонт).
-struct ChartReveal<T: Equatable>: ViewModifier {
-    let trigger: T
-    @State private var progress: CGFloat = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func body(content: Content) -> some View {
-        content
-            .mask(alignment: .leading) { GeometryReader { g in Rectangle().frame(width: g.size.width * progress) } }
-            .onAppear(perform: reveal)
-            .onChange(of: trigger) {
-                progress = 0
-                DispatchQueue.main.async(execute: reveal)
-            }
-    }
-
-    private func reveal() {
-        if reduceMotion { progress = 1 } else { withAnimation(.easeOut(duration: 0.8)) { progress = 1 } }
-    }
-}
-
-/// Кольцевая диаграмма раскручивается и вырастает из центра.
-struct DonutReveal<T: Equatable>: ViewModifier {
-    let trigger: T
-    @State private var progress: CGFloat = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func body(content: Content) -> some View {
-        content
-            .scaleEffect(0.7 + 0.3 * progress)
-            .rotationEffect(.degrees(-90 * (1 - progress)))
-            .opacity(progress)
-            .onAppear(perform: reveal)
-            .onChange(of: trigger) {
-                progress = 0
-                DispatchQueue.main.async(execute: reveal)
-            }
-    }
-
-    private func reveal() {
-        if reduceMotion { progress = 1 } else { withAnimation(.spring(duration: 0.7, bounce: 0.2)) { progress = 1 } }
-    }
-}
-
-extension View {
-    func chartReveal<T: Equatable>(trigger: T = 0) -> some View { modifier(ChartReveal(trigger: trigger)) }
-    func donutReveal<T: Equatable>(trigger: T = 0) -> some View { modifier(DonutReveal(trigger: trigger)) }
 }
 
 /// Крупная галочка поверх формы после сохранения, перед закрытием окна.
 struct SavedBadge: View {
     let tint: Color
-    @State private var bounce = false
 
     var body: some View {
         Image(systemName: "checkmark.circle.fill")
             .font(.system(size: 76, weight: .bold))
             .foregroundStyle(tint)
-            .symbolEffect(.bounce, value: bounce)
             .padding(28)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28))
-            .onAppear { bounce = true }
             .accessibilityHidden(true)
     }
 }
@@ -333,30 +277,15 @@ extension Font {
     }
 }
 
-/// Горизонтальная тряска: за один целый шаг `animatableData` текст качается влево-вправо и возвращается на место.
-struct ShakeEffect: GeometryEffect {
-    var animatableData: CGFloat
-    func effectValue(size: CGSize) -> ProjectionTransform {
-        ProjectionTransform(CGAffineTransform(translationX: 7 * sin(animatableData * .pi * 6), y: 0))
-    }
-}
-
-/// Красная подпись ошибки в форме: появляется и трясётся, а при каждом новом `tick` (повторная попытка сохранить) трясётся снова.
+/// Красная подпись ошибки в форме. Без тряски: о повторной неудачной попытке сообщает тактильный отклик.
 struct FormError: View {
     let key: LocalizedStringKey
-    let tick: Int
-    @State private var phase: CGFloat = 0
 
-    init(_ key: LocalizedStringKey, tick: Int) { self.key = key; self.tick = tick }
+    init(_ key: LocalizedStringKey, tick: Int) { self.key = key }
 
     var body: some View {
         Text(key).font(.app(.caption)).foregroundStyle(.red)
-            .modifier(ShakeEffect(animatableData: phase))
-            .onAppear(perform: shake)
-            .onChange(of: tick) { shake() }
     }
-
-    private func shake() { withAnimation(.linear(duration: 0.45)) { phase += 1 } }
 }
 
 /// Тактильный отклик. Вызывается напрямую, потому что экран часто закрывается в тот же момент, и `.sensoryFeedback` не успел бы сработать.

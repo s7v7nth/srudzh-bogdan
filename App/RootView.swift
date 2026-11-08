@@ -24,19 +24,27 @@ struct RootView: View {
     }
 
     var body: some View {
-        TabView(selection: $tab) {
-            Group {
-                if chaos { ChaosHomeView() } else { AccountsView() }
+        MainTabs(selection: $tab, tabs: [
+            MainTab(id: 0, title: "tab.accounts", icon: chaos ? "circle.grid.2x2.fill" : "creditcard"),
+            MainTab(id: 1, title: "tab.activity", icon: "list.bullet"),
+            MainTab(id: 2, title: "tab.budgets", icon: "chart.pie"),
+            MainTab(id: 3, title: "tab.scheduled", icon: "repeat"),
+            MainTab(id: 4, title: "tab.reports", icon: "chart.xyaxis.line"),
+        ]) { i in
+            switch i {
+            case 0: if chaos { ChaosHomeView() } else { AccountsView() }
+            case 1: ActivityView()
+            case 2: BudgetsView()
+            case 3: ScheduledView()
+            default: ReportsView()
             }
-            .tabItem { Label("tab.accounts", systemImage: chaos ? "circle.grid.2x2.fill" : "creditcard") }.tag(0)
-            ActivityView().tabItem { Label("tab.activity", systemImage: "list.bullet") }.tag(1)
-            BudgetsView().tabItem { Label("tab.budgets", systemImage: "chart.pie") }.tag(2)
-            ScheduledView().tabItem { Label("tab.scheduled", systemImage: "repeat") }.tag(3)
-            ReportsView().tabItem { Label("tab.reports", systemImage: "chart.xyaxis.line") }.tag(4)
         }
-        .sensoryFeedback(.selection, trigger: tab)
         .overlay {
-            if fanOpen { Color.black.opacity(0.25).ignoresSafeArea().onTapGesture { withAnimation(.spring(duration: 0.25)) { fanOpen = false } } }
+            if fanOpen {
+                Color.black.opacity(0.25).ignoresSafeArea()
+                    .onTapGesture { withAnimation(Motion.standard) { fanOpen = false } }
+                    .transition(.opacity)
+            }
         }
         .overlay(alignment: .bottomTrailing) {
             if !(chaos && tab == 0) { addMenu }
@@ -70,11 +78,11 @@ struct RootView: View {
                         .padding(.leading, 16).padding(.trailing, 4).padding(.vertical, 4)
                         .background(Theme.raised, in: Capsule()).overlay(Capsule().strokeBorder(.white.opacity(0.08))).shadow(radius: 6, y: 3)
                     }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(.scale(scale: 0.9, anchor: .bottomTrailing).combined(with: .opacity))
                 }
             }
             Button {
-                withAnimation(.spring(duration: 0.3)) { fanOpen.toggle() }
+                withAnimation(Motion.standard) { fanOpen.toggle() }
             } label: {
                 Image(systemName: "plus").font(.app(.title2, .bold)).foregroundStyle(Theme.onBrand)
                     .rotationEffect(.degrees(fanOpen ? 45 : 0))
@@ -82,6 +90,6 @@ struct RootView: View {
             }
             .accessibilityLabel(Text("add.title"))
         }
-        .padding(.trailing, 20).padding(.bottom, 64)
+        .padding(.trailing, 20).padding(.bottom, 80)
     }
 }

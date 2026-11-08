@@ -54,6 +54,7 @@
 		B505928B180C5176DE2A80CB /* OnbImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D61E38F37A4A91CC3C65B10 /* OnbImportSheet.swift */; };
 		BC40E0321B7EB70701AEE107 /* BreakdownReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9D2B4EC7804F263B1BB43FD /* BreakdownReport.swift */; };
 		BD4AF336DF79A2F82F8CD785 /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DD58E1BBB838ACC99D9B814C /* Manrope-SemiBold.ttf */; };
+		C307F1B394F602130D5DDC51 /* MainTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFF74E8ED197BCCE91D6B28 /* MainTabs.swift */; };
 		C55082B9FAF7991EF3819C15 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9848C314B59188CBC776409 /* ReportsView.swift */; };
 		CA4C86C95113C7D806A810FB /* OnboardingComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1A130331EC13BDF9D08A24 /* OnboardingComponents.swift */; };
 		CAEE9CECAD3E1631877D8E56 /* OnboardingDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7E0E3ACF8C363BF78604622 /* OnboardingDraft.swift */; };
@@ -108,6 +109,7 @@
 		7C956D8C85AB93CBC80D4866 /* Manrope-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Medium.ttf"; sourceTree = "<group>"; };
 		840F9E96F25D3B26B48D4F56 /* BudgetsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetsView.swift; sourceTree = "<group>"; };
 		8BE73190C4AAD9D876C774E8 /* OnboardingCommit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCommit.swift; sourceTree = "<group>"; };
+		8BFF74E8ED197BCCE91D6B28 /* MainTabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabs.swift; sourceTree = "<group>"; };
 		8FFA134F1CC9FA3E12670D2F /* LedgerCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LedgerCore; path = LedgerCore; sourceTree = SOURCE_ROOT; };
 		945B4964B058A1FC2B096C57 /* BackupSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupSnapshot.swift; sourceTree = "<group>"; };
 		A3960D8506A9E562BEB020BD /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
@@ -243,6 +245,7 @@
 				BCB6E4A0AE5E47599BD66E84 /* CreditLineView.swift */,
 				57820428B34AC89AEC520E29 /* DebtView.swift */,
 				1EC1794F2968F62B6BFDE050 /* EveningViews.swift */,
+				8BFF74E8ED197BCCE91D6B28 /* MainTabs.swift */,
 				E9E3FBE61BF7FB8C7E720735 /* ScheduledView.swift */,
 				F8ADE1D9A99662E7AFDDE7F7 /* SettingsViews.swift */,
 				3722539025B0D4D95AB3C712 /* SMSViews.swift */,
@@ -398,6 +401,7 @@
 				F2AE89392B15A22B3A1BD3F8 /* Helpers.swift in Sources */,
 				ABF5FA30D8A76343DA7EBDE2 /* ImportStyle.swift in Sources */,
 				E899911395385D782F1AB4C1 /* IncomeExpenseReport.swift in Sources */,
+				C307F1B394F602130D5DDC51 /* MainTabs.swift in Sources */,
 				675EC1AA2DFF5EA48B618BB4 /* Models.swift in Sources */,
 				E569D6060D1F73D5B7DB4B62 /* MoneyText.swift in Sources */,
 				F072D2F6659F8F6CDF5546D1 /* NetWorthReport.swift in Sources */,

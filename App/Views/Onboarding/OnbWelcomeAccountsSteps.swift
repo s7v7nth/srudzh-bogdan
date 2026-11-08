@@ -59,7 +59,7 @@ extension OnbWelcomeStep {
                         Text("onb.import.doneDetail \(l.entries.count) \(l.accounts.count)").font(.app(.caption)).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button("onb.import.remove") { withAnimation(.snappy) { draft.clearImport() } }.font(.app(.subheadline))
+                    Button("onb.import.remove") { withAnimation(Motion.standard) { draft.clearImport() } }.font(.app(.subheadline))
                 }
             } else {
                 Text("onb.import.title").font(.app(.body, .semibold))
@@ -80,7 +80,7 @@ struct OnbAccountsStep: View {
             OnbHeader(icon: "creditcard", title: "onb.accounts.title", subtitle: "onb.accounts.subtitle")
             ForEach($draft.accounts) { $a in
                 OnbCard {
-                    Button { withAnimation(.snappy) { a.enabled.toggle() } } label: {
+                    Button { withAnimation(Motion.standard) { a.enabled.toggle() } } label: {
                         HStack(spacing: 12) {
                             OnbIcon(name: a.kind.icon)
                             if a.isCustom && a.enabled {
@@ -122,7 +122,7 @@ struct OnbAccountsStep: View {
                 }
             }
             Button {
-                withAnimation(.snappy) {
+                withAnimation(Motion.standard) {
                     var a = AccountDraft(kind: .card, name: "", currency: draft.currency, enabled: true)
                     a.isCustom = true
                     draft.accounts.append(a)

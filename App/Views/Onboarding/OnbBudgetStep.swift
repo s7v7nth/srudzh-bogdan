@@ -139,7 +139,7 @@ struct OnbBudgetStep: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(BudgetSplit.templates) { t in
-                        Button { withAnimation(.snappy) { draft.applyTemplate(t) } } label: {
+                        Button { withAnimation(Motion.standard) { draft.applyTemplate(t) } } label: {
                             Text(t.id).monospacedDigit().onbChip(selected: draft.template == t.id)
                         }.buttonStyle(.plain)
                     }
@@ -232,7 +232,7 @@ struct OnbDonut: View {
             }
             .padding(line / 2)
             .frame(width: g.size.width, height: g.size.height)
-            .animation(.snappy(duration: 0.35), value: arcs.map(\.to))
+            .animation(Motion.standard, value: arcs.map(\.to))
         }
     }
 }
