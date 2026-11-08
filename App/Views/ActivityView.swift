@@ -48,8 +48,10 @@ struct ActivityView: View {
                 ContentUnavailableView("activity.empty", systemImage: "list.bullet", description: Text("activity.emptyHint"))
             }
             ForEach(days(list), id: \.0) { day, items in
-                Section(day.formatted(date: .complete, time: .omitted)) {
+                Section {
                     ForEach(items) { t in row(t).contentShape(Rectangle()).onTapGesture { editing = t }.swipeActions { Button("common.delete") { remove(t) }.tint(.red) } }
+                } header: {
+                    dayHeader(day, items)
                 }
             }
         }
@@ -68,6 +70,18 @@ struct ActivityView: View {
         }
 
         if account == nil { NavigationStack { content } } else { content }
+    }
+
+    /// Дата дня и итог за день в основной валюте. Переводы между своими счетами в сумме взаимно гасятся.
+    private func dayHeader(_ day: Date, _ items: [LedgerTransaction]) -> some View {
+        let total = items.reduce(Decimal(0)) { $0 + (rates.value(of: $1, in: rates.base) ?? 0) }
+        return HStack {
+            Text(day.formatted(date: .complete, time: .omitted))
+            Spacer()
+            if total != 0 {
+                MoneyText(amount: total, code: rates.base, colored: true, signed: true, weight: .semibold)
+            }
+        }
     }
 
     private func chip(_ type: TxType?) -> some View {
