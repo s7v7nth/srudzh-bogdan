@@ -136,6 +136,26 @@ import LedgerCore
         reclassifyQuizItems(ctx: ctx)
     }
 
+    /// Превращает СМС-операцию в перевод между своими счетами: на втором счёте создаётся парная запись (по курсу, если валюты разные).
+    static func makeTransfer(_ tx: LedgerTransaction, with other: Account, ctx: ModelContext, rates: RatesStore) {
+        guard let mine = tx.account, other !== mine else { return }
+        let id = UUID()
+        let magnitude = tx.amount.magnitude
+        let converted = mine.currency == other.currency ? magnitude : (rates.convert(magnitude, from: mine.currency, to: other.currency) ?? magnitude)
+        let partner = LedgerTransaction(amount: tx.amount < 0 ? converted : -converted, type: .transfer, date: tx.date,
+                                        payee: tx.payee, notes: tx.notes, transferID: id, account: other)
+        tx.type = .transfer
+        tx.transferID = id
+        tx.category = nil
+        tx.review = .done
+        ctx.insert(partner)
+        rates.stamp(partner)
+        let when = tx.date
+        Task { await rates.stampHistorical([partner], on: when) }
+        try? ctx.save()
+        reclassifyQuizItems(ctx: ctx)
+    }
+
     // MARK: Сверка остатка
 
     /// На сколько остаток в СМС расходится с остатком счёта в приложении на момент операции. nil, если сходится или сверять нечем.
