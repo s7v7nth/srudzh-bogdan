@@ -24,6 +24,7 @@
 		2C645D13BA129B2E913815C5 /* BynSign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EB149F315CE7E75045F008F /* BynSign.swift */; };
 		2FA6FC6D4AB398EA5DBA55AD /* OnboardingCommit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BE73190C4AAD9D876C774E8 /* OnboardingCommit.swift */; };
 		3092234840FF41145D9D95DC /* EveningNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABD1059774D7CEEAA0AC074 /* EveningNotifier.swift */; };
+		41A458A017E18035156E2F31 /* LoanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C64F8CBED0086A24464581 /* LoanView.swift */; };
 		44749C1A9D954E2C4F84989E /* OnbBudgetStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116762DDB3717726FF052BA5 /* OnbBudgetStep.swift */; };
 		461906825DA1596838CA0037 /* EveningViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1794F2968F62B6BFDE050 /* EveningViews.swift */; };
 		4CDA49EB582F109D66A8D2C5 /* Manrope-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F4EE845C57BE3856A731E6D7 /* Manrope-Regular.ttf */; };
@@ -111,6 +112,7 @@
 		8FFA134F1CC9FA3E12670D2F /* LedgerCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LedgerCore; path = LedgerCore; sourceTree = SOURCE_ROOT; };
 		945B4964B058A1FC2B096C57 /* BackupSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupSnapshot.swift; sourceTree = "<group>"; };
 		A3960D8506A9E562BEB020BD /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
+		A5C64F8CBED0086A24464581 /* LoanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanView.swift; sourceTree = "<group>"; };
 		AABD1059774D7CEEAA0AC074 /* EveningNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningNotifier.swift; sourceTree = "<group>"; };
 		AC1A130331EC13BDF9D08A24 /* OnboardingComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingComponents.swift; sourceTree = "<group>"; };
 		B008CDE08E8F0EF95A3F1BA4 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -243,6 +245,7 @@
 				BCB6E4A0AE5E47599BD66E84 /* CreditLineView.swift */,
 				57820428B34AC89AEC520E29 /* DebtView.swift */,
 				1EC1794F2968F62B6BFDE050 /* EveningViews.swift */,
+				A5C64F8CBED0086A24464581 /* LoanView.swift */,
 				E9E3FBE61BF7FB8C7E720735 /* ScheduledView.swift */,
 				F8ADE1D9A99662E7AFDDE7F7 /* SettingsViews.swift */,
 				3722539025B0D4D95AB3C712 /* SMSViews.swift */,
@@ -398,6 +401,7 @@
 				F2AE89392B15A22B3A1BD3F8 /* Helpers.swift in Sources */,
 				ABF5FA30D8A76343DA7EBDE2 /* ImportStyle.swift in Sources */,
 				E899911395385D782F1AB4C1 /* IncomeExpenseReport.swift in Sources */,
+				41A458A017E18035156E2F31 /* LoanView.swift in Sources */,
 				675EC1AA2DFF5EA48B618BB4 /* Models.swift in Sources */,
 				E569D6060D1F73D5B7DB4B62 /* MoneyText.swift in Sources */,
 				F072D2F6659F8F6CDF5546D1 /* NetWorthReport.swift in Sources */,

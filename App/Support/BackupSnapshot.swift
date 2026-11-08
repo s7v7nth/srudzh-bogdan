@@ -35,6 +35,11 @@ struct BackupSnapshot: Codable {
         var sortID: Int
         var creditLimit, interestRate, minPercent, minFloor: String?
         var statementDay, graceDays, dueDays: Int?
+        // Долг и кредит. Необязательные: в старых копиях их нет.
+        var debtOwedToMe: Bool?
+        var debtDue: Date?
+        var debtPrincipal: String?
+        var loanCategory: UUID?
     }
 
     struct CategoryDTO: Codable {
@@ -79,6 +84,8 @@ struct BackupSnapshot: Codable {
         var active: Bool
         var account: Int?
         var category: UUID?
+        /// Счёт получателя для перевода по расписанию (платёж по кредиту). В старых копиях нет.
+        var toAccount: Int?
     }
 
     struct PlanDTO: Codable {
@@ -123,7 +130,9 @@ extension BackupSnapshot {
                 isPrimary: a.isPrimary, hiddenOnHome: a.hiddenOnHome, graceFromStatement: a.graceFromStatement,
                 sortID: a.sortID, creditLimit: str(a.creditLimit), interestRate: str(a.interestRate),
                 minPercent: str(a.minPercent), minFloor: str(a.minFloor),
-                statementDay: a.statementDay, graceDays: a.graceDays, dueDays: a.dueDays))
+                statementDay: a.statementDay, graceDays: a.graceDays, dueDays: a.dueDays,
+                debtOwedToMe: a.debtOwedToMe, debtDue: a.debtDue, debtPrincipal: str(a.debtPrincipal),
+                loanCategory: a.loanCategoryID))
         }
         func acc(_ a: Account?) -> Int? { a.flatMap { accountID[$0.persistentModelID] } }
 
@@ -146,7 +155,7 @@ extension BackupSnapshot {
         s.recurring = try ctx.fetch(FetchDescriptor<RecurringTransaction>()).map {
             RecurringDTO(amount: str($0.amount), type: $0.type, payee: $0.payee, nextDate: $0.nextDate,
                          repeatType: $0.repeatType, duration: $0.duration, endDate: $0.endDate, active: $0.active,
-                         account: acc($0.account), category: $0.category?.uuid)
+                         account: acc($0.account), category: $0.category?.uuid, toAccount: acc($0.toAccount))
         }
         s.plan = try ctx.fetch(FetchDescriptor<PlanItem>()).map {
             PlanDTO(name: $0.name, isIncome: $0.isIncome, annualAmount: str($0.annualAmount),
@@ -190,6 +199,8 @@ extension BackupSnapshot {
             m.creditLimit = dec(a.creditLimit); m.interestRate = dec(a.interestRate)
             m.minPercent = dec(a.minPercent); m.minFloor = dec(a.minFloor)
             m.statementDay = a.statementDay; m.graceDays = a.graceDays; m.dueDays = a.dueDays
+            m.debtOwedToMe = a.debtOwedToMe ?? true; m.debtDue = a.debtDue; m.debtPrincipal = dec(a.debtPrincipal)
+            m.loanCategoryID = a.loanCategory
             ctx.insert(m)
             accountByID[a.id] = m
         }
@@ -221,7 +232,7 @@ extension BackupSnapshot {
         for r in recurring {
             let m = RecurringTransaction(amount: dec(r.amount), type: r.type, payee: r.payee, nextDate: r.nextDate,
                                          repeatType: r.repeatType, duration: r.duration, endDate: r.endDate,
-                                         account: acc(r.account), category: cat(r.category))
+                                         account: acc(r.account), category: cat(r.category), toAccount: acc(r.toAccount))
             m.active = r.active
             ctx.insert(m)
         }

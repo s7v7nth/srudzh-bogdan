@@ -11,14 +11,18 @@ enum TxType: String, Codable, CaseIterable {
 }
 
 enum AccountKind: String, Codable, CaseIterable {
-    case card, cash, savings, creditLine, debt
+    case card, cash, savings, creditLine, debt, loan
     var label: LocalizedStringKey {
         switch self {
         case .card: "kind.card"; case .cash: "kind.cash"; case .savings: "kind.savings"; case .creditLine: "kind.creditLine"; case .debt: "kind.debt"
+        case .loan: "kind.loan"
         }
     }
     var icon: String {
-        switch self { case .card: "creditcard"; case .cash: "banknote"; case .savings: "building.columns"; case .creditLine: "creditcard.and.123"; case .debt: "person.2" }
+        switch self {
+        case .card: "creditcard"; case .cash: "banknote"; case .savings: "building.columns"; case .creditLine: "creditcard.and.123"; case .debt: "person.2"
+        case .loan: "percent"
+        }
     }
 }
 
@@ -44,8 +48,10 @@ enum AccountKind: String, Codable, CaseIterable {
     // Долг: true, если должны мне (остаток положительный), false, если должен я (остаток отрицательный).
     var debtOwedToMe: Bool = true
     var debtDue: Date?
-    /// Исходная сумма долга, чтобы показывать, сколько уже возвращено.
+    /// Исходная сумма долга (и кредита), чтобы показывать, сколько уже возвращено.
     var debtPrincipal: Decimal?
+    /// Кредит: в бюджет какой категории расходов идут платежи (переводы на этот счёт). Ставка в `interestRate`.
+    var loanCategoryID: UUID?
     @Relationship(deleteRule: .cascade, inverse: \LedgerTransaction.account)
     var transactions: [LedgerTransaction] = []
 
@@ -56,6 +62,7 @@ enum AccountKind: String, Codable, CaseIterable {
 
     var isCredit: Bool { kind == .creditLine }
     var isDebt: Bool { kind == .debt }
+    var isLoan: Bool { kind == .loan }
 
     var terms: CreditTerms {
         CreditTerms(limit: creditLimit ?? 0, aprPercent: interestRate ?? 0, statementDay: statementDay ?? 1,
@@ -126,6 +133,11 @@ enum AccountKind: String, Codable, CaseIterable {
     var currency: String { account?.currency ?? "" }
     /// Перевод на кредитную линию с другого счёта это погашение.
     var isRepayment: Bool { type == .transfer && amount > 0 && (account?.isCredit ?? false) }
+    /// Платёж по кредиту (поступление на счёт-кредит): категория, в бюджет которой он идёт. Иначе nil.
+    var loanPaymentCategory: UUID? {
+        guard type == .transfer, amount > 0, let a = account, a.isLoan else { return nil }
+        return a.loanCategoryID
+    }
 }
 
 /// Что операции из СМС ещё нужно от пользователя.
@@ -187,12 +199,20 @@ extension LedgerTransaction {
     var active: Bool
     var account: Account?
     var category: Category?
+    /// Для перевода: куда идут деньги (например, платёж по кредиту). Сумма хранится отрицательной, как списание с `account`.
+    var toAccount: Account?
 
     init(amount: Decimal, type: TxType, payee: String, nextDate: Date, repeatType: Int = 3, duration: Int = 1,
-         endDate: Date? = nil, account: Account?, category: Category? = nil) {
+         endDate: Date? = nil, account: Account?, category: Category? = nil, toAccount: Account? = nil) {
         self.amount = amount; self.type = type; self.payee = payee; self.nextDate = nextDate
         self.repeatType = repeatType; self.duration = duration; self.endDate = endDate
-        self.active = true; self.account = account; self.category = category
+        self.active = true; self.account = account; self.category = category; self.toAccount = toAccount
+    }
+
+    /// Сколько платежей осталось до даты окончания. nil, если окончания нет.
+    var paymentsLeft: Int? {
+        guard active else { return 0 }
+        return Loans.scheduledPayments(next: nextDate, end: endDate, repeatType: repeatType, duration: duration)
     }
 }
 

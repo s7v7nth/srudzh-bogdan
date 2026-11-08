@@ -113,7 +113,8 @@ struct AccountsView: View {
 
     @ViewBuilder private func accountLink(_ a: Account) -> some View {
         NavigationLink {
-            if a.isCredit { CreditLineView(account: a) } else if a.isDebt { DebtView(account: a) } else { ActivityView(account: a) }
+            if a.isCredit { CreditLineView(account: a) } else if a.isDebt { DebtView(account: a) }
+            else if a.isLoan { LoanView(account: a) } else { ActivityView(account: a) }
         } label: { row(a) }
         .contextMenu { Button("common.edit", systemImage: "pencil") { editing = a } }
         .swipeActions {
@@ -182,7 +183,12 @@ struct AccountFormView: View {
     @State private var hasDue = false
     @State private var dueDate = Calendar.current.date(byAdding: .month, value: 1, to: .now) ?? .now
     @State private var counter: Account?
+    @State private var loanCategory: Category?
+    @State private var loanPayment = ""
+    @State private var loanFirstDate = Date()
+    @State private var loanFrom: Account?
     @Query(sort: \Account.sortID) private var allAccounts: [Account]
+    @Query private var categories: [Category]
     @State private var submitted = false
     @State private var errorTick = 0
     @State private var loaded = false
@@ -198,7 +204,7 @@ struct AccountFormView: View {
                     Picker("account.kind", selection: $kind) { ForEach(AccountKind.allCases, id: \.self) { Text($0.label).tag($0) } }
                     CurrencyPicker(title: "account.currency", code: $currency).disabled(hasTransactions)
                     if !isEditing {
-                        AmountField(title: kind == .creditLine ? "account.openingDebt" : (kind == .debt ? "debt.amount" : "account.opening"), text: $opening, code: currency)
+                        AmountField(title: kind == .creditLine ? "account.openingDebt" : (kind == .debt ? "debt.amount" : (kind == .loan ? "loan.actualDebt" : "account.opening")), text: $opening, code: currency)
                     }
                     Toggle("account.primary", isOn: $primary)
                     Toggle("account.excluded", isOn: $excluded)
@@ -219,6 +225,23 @@ struct AccountFormView: View {
                             }
                         }
                     } footer: { if !isEditing { Text("debt.footer") } }
+                }
+
+                if kind == .loan {
+                    Section {
+                        HStack { TextField("loan.rateOptional", text: $apr).keyboardType(.decimalPad); Text("%").foregroundStyle(.secondary) }
+                        CategoryPickerRow(selection: $loanCategory, isIncome: false)
+                    } header: { Text("kind.loan") } footer: { Text("loan.budgetFooter") }
+                    if !isEditing {
+                        Section {
+                            AmountField(title: "loan.payment", text: $loanPayment, code: currency)
+                            DatePicker("loan.nextPayment", selection: $loanFirstDate, displayedComponents: .date)
+                            Picker("loan.fromAccount", selection: $loanFrom) {
+                                Text("field.choose").tag(Account?.none)
+                                ForEach(allAccounts.filter { !$0.isLoan && !$0.isDebt }) { Text($0.name).tag(Account?.some($0)) }
+                            }
+                        } header: { Text("loan.schedule") } footer: { Text("loan.scheduleFooter") }
+                    }
                 }
 
                 if kind == .creditLine {
@@ -249,12 +272,20 @@ struct AccountFormView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("common.save", action: save) }
             }
             .onAppear(perform: load)
+            .onChange(of: kind) { _, k in
+                // Кредит по умолчанию не входит в «Баланс»: там живые деньги, а не долг банку.
+                guard !isEditing, k == .loan else { return }
+                primary = false
+                if loanCategory == nil { loanCategory = categories.first { !$0.isIncome && CSV.key($0.name) == CSV.key(String(localized: "cat.loans")) } }
+                if loanFrom == nil { loanFrom = allAccounts.first { !$0.isLoan && !$0.isDebt && !$0.isCredit } }
+            }
         }
     }
 
     private func load() {
         guard !loaded else { return }; loaded = true
         guard let a = account else { currency = rates.base; return }
+        loanCategory = a.loanCategoryID.flatMap { id in categories.first { $0.uuid == id } }
         owedToMe = a.debtOwedToMe; hasDue = a.debtDue != nil; dueDate = a.debtDue ?? dueDate
         name = a.name; kind = a.kind; currency = a.currency; excluded = a.excludedFromNetWorth; primary = a.isPrimary
         limit = a.creditLimit.map { "\($0)" } ?? ""; apr = a.interestRate.map { "\($0)" } ?? ""
@@ -268,6 +299,7 @@ struct AccountFormView: View {
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { fail(); return }
         if kind == .creditLine, (Decimal.parse(limit) ?? 0) <= 0 { fail(); return }
         if kind == .debt, account == nil, (Decimal.parse(opening) ?? 0) == 0 { fail(); return }
+        if kind == .loan, account == nil, (Decimal.parse(opening) ?? 0) <= 0 { fail(); return }
         let a = account ?? Account(name: name, currency: currency, kind: kind, sortID: nextSort)
         a.name = name; a.kind = kind; a.excludedFromNetWorth = excluded; a.isPrimary = primary
         if !hasTransactions { a.currency = currency }
@@ -279,6 +311,9 @@ struct AccountFormView: View {
         }
         if kind == .debt {
             a.debtOwedToMe = owedToMe; a.debtDue = hasDue ? dueDate : nil
+        }
+        if kind == .loan {
+            a.interestRate = Decimal.parse(apr); a.loanCategoryID = loanCategory?.uuid
         }
         if account == nil {
             ctx.insert(a)
@@ -293,6 +328,17 @@ struct AccountFormView: View {
                 } else {
                     let tx = LedgerTransaction(amount: signed, type: signed > 0 ? .income : .expense, payee: String(localized: "account.openingPayee"), account: a)
                     ctx.insert(tx); rates.stamp(tx)
+                }
+            } else if kind == .loan, let o = Decimal.parse(opening), o > 0 {
+                a.debtPrincipal = o
+                let tx = LedgerTransaction(amount: -o, type: .expense, payee: String(localized: "account.openingPayee"), account: a)
+                ctx.insert(tx); rates.stamp(tx)
+                // Ежемесячный платёж: перевод по расписанию до погашения остатка.
+                if let p = Decimal.parse(loanPayment), p > 0, let from = loanFrom {
+                    let n = Loans.paymentsLeft(debt: o, payment: p) ?? 1
+                    let end = Calendar.current.date(byAdding: .month, value: n - 1, to: loanFirstDate)
+                    ctx.insert(RecurringTransaction(amount: -p, type: .transfer, payee: name, nextDate: loanFirstDate,
+                                                    endDate: end, account: from, toAccount: a))
                 }
             } else if let o = Decimal.parse(opening), o != 0 {
                 let signed = kind == .creditLine ? -abs(o) : o

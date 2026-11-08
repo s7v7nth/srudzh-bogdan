@@ -7,6 +7,7 @@ struct OnbSummaryStep: View {
 
     private var accountCount: Int {
         draft.enabledAccounts.count + draft.credits.filter { !$0.name.trimmingCharacters(in: .whitespaces).isEmpty }.count
+            + draft.countedLoans.filter(\.isActive).count
     }
     private var paymentCount: Int {
         (draft.incomes + draft.bills + draft.countedLoans + draft.subscriptions).filter(\.isActive)

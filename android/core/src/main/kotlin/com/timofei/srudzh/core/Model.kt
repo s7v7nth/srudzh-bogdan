@@ -15,7 +15,7 @@ enum class TxType(val raw: String) {
 }
 
 enum class AccountKind(val raw: String) {
-    CARD("card"), CASH("cash"), SAVINGS("savings"), CREDIT_LINE("creditLine"), DEBT("debt");
+    CARD("card"), CASH("cash"), SAVINGS("savings"), CREDIT_LINE("creditLine"), DEBT("debt"), LOAN("loan");
 
     companion object {
         fun of(raw: String): AccountKind = entries.firstOrNull { it.raw == raw } ?: CARD
@@ -61,6 +61,12 @@ data class Account(
     val statementDay: Int? = null,
     val graceDays: Int? = null,
     val dueDays: Int? = null,
+    // Долг и банковский кредит: на Android пока не показываются, но хранятся, чтобы не потерять при переносе.
+    val debtOwedToMe: Boolean? = null,
+    val debtDue: Instant? = null,
+    val debtPrincipal: BigDecimal? = null,
+    /** Кредит: UUID категории, в бюджет которой идут платежи. */
+    val loanCategory: String? = null,
 ) {
     val isCredit: Boolean get() = kind == AccountKind.CREDIT_LINE
 }

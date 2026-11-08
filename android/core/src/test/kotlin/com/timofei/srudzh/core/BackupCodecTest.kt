@@ -13,7 +13,8 @@ class BackupCodecTest {
     /** Так выглядит копия, которую пишет iPhone: даты числом секунд от 2001 года, у операций нет id. */
     private val iphoneFile = """
         {"accounts":[{"currency":"BYN","excluded":false,"graceFromStatement":true,"hiddenOnHome":false,"id":0,"isPrimary":true,"kind":"card","name":"Приорбанк","sortID":0},
-                     {"creditLimit":"1500","currency":"USD","excluded":true,"graceFromStatement":false,"hiddenOnHome":true,"id":1,"isPrimary":false,"kind":"creditLine","name":"Кредитка","sortID":1,"statementDay":5}],
+                     {"creditLimit":"1500","currency":"USD","excluded":true,"graceFromStatement":false,"hiddenOnHome":true,"id":1,"isPrimary":false,"kind":"creditLine","name":"Кредитка","sortID":1,"statementDay":5},
+                     {"currency":"BYN","excluded":false,"graceFromStatement":true,"hiddenOnHome":false,"id":2,"isPrimary":false,"kind":"loan","name":"Автокредит","sortID":2,"interestRate":"14","debtOwedToMe":true,"debtPrincipal":"6000","loanCategory":"0B5A2C1E-0000-4000-8000-000000000001"}],
          "budgets":[{"amount":"300","carryOver":false,"categories":["0B5A2C1E-0000-4000-8000-000000000001"],"currency":"BYN","name":"Еда","repeatType":3,"startDate":783000000}],
          "cardAliases":[{"account":0,"last4":"8780"}],
          "categories":[{"color":"green","hiddenOnHome":false,"icon":"cart","isIncome":false,"name":"Продукты","sortID":0,"archived":false,"uuid":"0B5A2C1E-0000-4000-8000-000000000001","lastUsed":783436283.5},
@@ -21,7 +22,7 @@ class BackupCodecTest {
          "created":783500000.25,
          "payeeAliases":[{"key":"SHOP KOPEECHKA","name":"Копейка","original":"SHOP KOPEECHKA"}],
          "plan":[],
-         "recurring":[],
+         "recurring":[{"account":0,"active":true,"amount":"-250","duration":1,"nextDate":783500000,"payee":"Автокредит","repeatType":3,"toAccount":2,"type":"transfer"}],
          "settings":{"baseCurrency":"BYN","chaos":true,"scheduleWindowDays":7},
          "transactions":[{"account":0,"amount":"-10.08","baseCode":"BYN","category":"0B5A2C1E-0000-4000-8000-000000000001","date":783436283,"notes":"","payee":"Копейка","pending":false,"rateToBase":"1","smsBalance":"103.82","smsCard":"8780","smsCurrency":"BYN","smsKey":"8780|1761743483|10.08|purchase","smsReview":0,"type":"expense"},
                          {"account":0,"amount":"-50","baseCode":"BYN","date":783440000,"notes":"","payee":"","pending":true,"rateToBase":"1","smsCard":"","smsCurrency":"","smsKey":"","smsReview":0,"transferID":"6C1D1D1D-0000-4000-8000-000000000009","type":"transfer"},
@@ -35,7 +36,12 @@ class BackupCodecTest {
         assertEquals(true, l.settings.chaos)
         assertEquals(7, l.settings.scheduleWindowDays)
 
-        assertEquals(listOf("Приорбанк", "Кредитка"), l.accounts.map { it.name })
+        assertEquals(listOf("Приорбанк", "Кредитка", "Автокредит"), l.accounts.map { it.name })
+        val loan = l.account(2)!!
+        assertEquals(AccountKind.LOAN, loan.kind)
+        assertEquals(BigDecimal("6000"), loan.debtPrincipal)
+        assertEquals("0B5A2C1E-0000-4000-8000-000000000001", loan.loanCategory)
+        assertEquals(JsonPrimitive(2), l.recurring.single()["toAccount"])
         val credit = l.account(1)!!
         assertEquals(AccountKind.CREDIT_LINE, credit.kind)
         assertEquals(true, credit.excluded)

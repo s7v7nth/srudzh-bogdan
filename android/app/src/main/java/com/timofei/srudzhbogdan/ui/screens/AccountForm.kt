@@ -116,7 +116,7 @@ fun AccountFormScreen(accountId: Int?) {
 
     if (pickKind) {
         val kinds = listOf(AccountKind.CARD, AccountKind.CASH, AccountKind.SAVINGS) + listOfNotNull(existing?.kind).filter {
-            it == AccountKind.CREDIT_LINE || it == AccountKind.DEBT
+            it == AccountKind.CREDIT_LINE || it == AccountKind.DEBT || it == AccountKind.LOAN
         }
         PickerDialog(stringResource(R.string.account_kind), kinds, kind, { Text(stringResource(it.label)) }, { kind = it }) { pickKind = false }
     }

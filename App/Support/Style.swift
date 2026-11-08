@@ -132,10 +132,15 @@ struct BudgetProgress {
         let monitored: Set<UUID>? = b.categories.isEmpty ? nil : Set(b.categories.flatMap { $0.familyIDs })
         // Сначала отбираем операции периода: дальше по каждой идут обращения к счёту, категории и курсу.
         // Операцию без курса не считаем один к одному, иначе 100 долларов попали бы в бюджет как 100 рублей.
+        // Платёж по кредиту (перевод на счёт-кредит) идёт тратой в категорию кредита, см. `Loans`.
+        // Прочие операции на самом счёте-кредите (начальный долг) тратами не считаются.
         let txs = transactions.compactMap { t -> BudgetTransaction? in
-            guard t.date >= p.start, t.date < p.end, t.type != .transfer, t.account != nil,
-                  let rate = rates.rate(of: t, to: cur) else { return nil }
-            return BudgetTransaction(amount: t.amount, date: t.date, categoryID: t.category?.uuid, pending: t.pending, rate: rate)
+            guard t.date >= p.start, t.date < p.end, let a = t.account else { return nil }
+            let loanCategory = t.loanPaymentCategory
+            if a.isLoan ? loanCategory == nil : t.type == .transfer { return nil }
+            guard let rate = rates.rate(of: t, to: cur) else { return nil }
+            return BudgetTransaction(amount: loanCategory == nil ? t.amount : -t.amount, date: t.date,
+                                     categoryID: loanCategory ?? t.category?.uuid, pending: t.pending, rate: rate)
         }
         let r = Budgets.evaluate(limit: b.amount, period: p, transactions: txs, rules: BudgetRules(monitoredCategories: monitored))
         return BudgetProgress(spent: r.spent, limit: b.amount, remaining: r.remaining, currency: cur, periodEnd: p.end)

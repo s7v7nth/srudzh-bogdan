@@ -5,9 +5,19 @@ import LedgerCore
 extension RecurringTransaction {
     /// Создаёт операцию на дату платежа и сдвигает расписание.
     @MainActor func execute(in ctx: ModelContext, rates: RatesStore) {
-        let tx = LedgerTransaction(amount: amount, type: type, date: nextDate, payee: payee, account: account, category: category)
-        ctx.insert(tx); rates.stamp(tx)
-        let created = [tx], day = nextDate
+        var created: [LedgerTransaction] = []
+        if type == .transfer, let to = toAccount {
+            // Перевод: списание со счёта и поступление на счёт получателя (в его валюте по текущему курсу).
+            let out = abs(amount), from = account?.currency ?? to.currency
+            let incoming = from == to.currency ? out : (rates.convert(out, from: from, to: to.currency) ?? out)
+            let id = UUID()
+            created = [LedgerTransaction(amount: -out, type: .transfer, date: nextDate, payee: payee, transferID: id, account: account),
+                       LedgerTransaction(amount: incoming, type: .transfer, date: nextDate, payee: payee, transferID: id, account: to)]
+        } else {
+            created = [LedgerTransaction(amount: amount, type: type, date: nextDate, payee: payee, account: account, category: category)]
+        }
+        for tx in created { ctx.insert(tx); rates.stamp(tx) }
+        let day = nextDate
         Task { await rates.stampHistorical(created, on: day) }
         skip()
     }

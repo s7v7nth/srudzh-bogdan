@@ -112,7 +112,7 @@ enum OnboardingCommit {
         }
 
         // Регулярные платежи и доходы
-        func schedule(_ p: PaymentDraft, income: Bool, category: Category?) {
+        func schedule(_ p: PaymentDraft, income: Bool, category: Category?, to target: Account? = nil) {
             guard p.isActive else { return }
             let account = p.accountID.flatMap { accountByDraft[$0] } ?? defaultAccount
             var dates: [Date]
@@ -129,16 +129,31 @@ enum OnboardingCommit {
             }
             let name = p.name.trimmingCharacters(in: .whitespaces)
             for date in dates {
-                ctx.insert(RecurringTransaction(amount: income ? p.amount : -p.amount, type: income ? .income : .expense,
+                // Платёж по кредиту это перевод на счёт кредита: долг уменьшается, а бюджет кредита заполняется.
+                let type: TxType = target != nil ? .transfer : (income ? .income : .expense)
+                ctx.insert(RecurringTransaction(amount: income ? p.amount : -p.amount, type: type,
                                                 payee: name, nextDate: date, repeatType: p.cadence.repeatType,
-                                                duration: p.cadence.duration, endDate: end, account: account, category: category))
+                                                duration: p.cadence.duration, endDate: end, account: account,
+                                                category: target != nil ? nil : category, toAccount: target))
                 counts.payments += 1
             }
         }
         for p in d.incomes { schedule(p, income: true, category: incomeByKey[p.categoryKey]) }
         for p in d.bills + d.subscriptions { schedule(p, income: false, category: expenseCategory(p.categoryKey)) }
         // Кредит без числа оставшихся платежей (и без остатка долга) не создаём: он тянулся бы бесконечно и портил отчёты.
-        for p in d.loans where p.remainingPayments != nil { schedule(p, income: false, category: expenseCategory(p.categoryKey)) }
+        // Каждый кредит становится счётом «Кредит» с остатком долга (введённым или оценкой «платежи × сумма»).
+        for p in d.loans where p.isActive {
+            guard let left = p.remainingPayments else { continue }
+            let debt = Decimal.parse(p.debtText).flatMap { $0 > 0 ? $0 : nil } ?? Loans.estimatedDebt(payments: left, payment: p.amount)
+            let loan = Account(name: p.name.trimmingCharacters(in: .whitespaces), currency: d.currency, kind: .loan,
+                               sortID: accountCount + counts.accounts)
+            loan.isPrimary = false
+            loan.debtPrincipal = debt
+            loan.loanCategoryID = expenseCategory(p.categoryKey)?.uuid
+            ctx.insert(loan); counts.accounts += 1
+            addOpening(-debt, to: loan)
+            schedule(p, income: false, category: nil, to: loan)
+        }
 
         // Бюджеты: по одному на категорию, на месяц.
         let monthStart = cal.dateInterval(of: .month, for: .now)?.start ?? .now

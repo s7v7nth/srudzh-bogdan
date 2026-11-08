@@ -98,6 +98,7 @@
     <string name="kind_cash">Cash</string>
     <string name="kind_creditLine">Credit line</string>
     <string name="kind_debt">Debt</string>
+    <string name="kind_loan">Loan</string>
     <string name="kind_savings">Savings</string>
     <string name="rates_builtin">Built-in rates</string>
     <string name="rates_error">Could not load rates. Using the last saved ones.</string>
