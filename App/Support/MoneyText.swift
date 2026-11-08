@@ -13,12 +13,17 @@ struct MoneyText: View {
     var tabular = true
     /// Жирность цифр, нужна знаку BYN, чтобы черта была той же толщины.
     var weight: Font.Weight = .regular
+    /// Цифры прокручиваются к новому значению, как на табло. Только для главного баланса:
+    /// в списках и подписях прокрутка создаёт ощущение, что данные меняются сами.
+    var rolling = false
 
     private var content: some View {
         HStack(spacing: 3) {
             Text(Self.number(amount, code: code, signed: signed)).monospacedDigit(tabular)
+                .contentTransition(rolling ? .numericText(value: NSDecimalNumber(decimal: amount).doubleValue) : .identity)
             CurrencySymbolView(code: code, weight: weight)
         }
+        .animation(rolling ? .snappy : nil, value: amount)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(Self.number(amount, code: code, signed: signed)) \(Self.spoken(code))"))
     }

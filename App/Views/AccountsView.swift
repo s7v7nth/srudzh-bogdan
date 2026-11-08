@@ -56,7 +56,7 @@ struct AccountsView: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(showAll ? "accounts.totalAll" : "accounts.total").font(.app(.caption, .bold)).tracking(1.2).textCase(.uppercase).foregroundStyle(.secondary)
-                            MoneyText(amount: n.total, code: rates.base, colored: true, tabular: false, weight: .heavy).font(.manrope(40, .heavy, relativeTo: .largeTitle))
+                            MoneyText(amount: n.total, code: rates.base, colored: true, tabular: false, weight: .heavy, rolling: true).font(.manrope(40, .heavy, relativeTo: .largeTitle))
                         }
                         Spacer(minLength: 8)
                         showAllButton

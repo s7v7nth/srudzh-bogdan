@@ -263,7 +263,7 @@ struct ChaosHomeView: View {
         return card {
             VStack(alignment: .leading, spacing: 10) {
                 Text(showAll ? "chaos.balance.all" : "chaos.balance").font(.app(.caption)).foregroundStyle(.secondary)
-                MoneyText(amount: worth, code: rates.base).font(.system(size: 34, weight: .bold))
+                MoneyText(amount: worth, code: rates.base, rolling: true).font(.system(size: 34, weight: .bold))
                     .foregroundStyle(worth < 0 ? TxType.expense.tint : Color.primary)
                 if showAll {
                     ScrollView(.horizontal, showsIndicators: false) {
