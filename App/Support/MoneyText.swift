@@ -61,9 +61,9 @@ struct LabeledMoney: View {
 }
 
 extension Decimal {
-    /// Разбор введённого числа с запятой или точкой.
+    /// Разбор введённого числа с запятой или точкой; понимает и выражения вроде «12+3*2».
     static func parse(_ s: String) -> Decimal? {
-        Decimal(string: s.replacingOccurrences(of: ",", with: ".").trimmingCharacters(in: .whitespaces))
+        Calculator.evaluate(s)
     }
 }
 

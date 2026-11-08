@@ -6291,6 +6291,74 @@
         }
       }
     },
+    "sms.makeTransfer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is a transfer between my accounts"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это перевод между моими счетами"
+          }
+        }
+      }
+    },
+    "sms.makeTransfer.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The entry stops counting as an expense or income and becomes a transfer; the second half appears on the account you pick."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запись перестанет считаться расходом или доходом и станет переводом; вторая половина появится на выбранном счёте."
+          }
+        }
+      }
+    },
+    "sms.transfer.fromTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which account did it come from?"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "С какого счёта пришли деньги?"
+          }
+        }
+      }
+    },
+    "sms.transfer.toTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which account did it go to?"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На какой счёт ушли деньги?"
+          }
+        }
+      }
+    },
     "sms.quiz.skip": {
       "extractionState": "manual",
       "localizations": {

@@ -121,3 +121,27 @@ final class LedgerCoreTests: XCTestCase {
         XCTAssertEqual(Plans.monthlyAmount(annualAmount: 500, repeatMonths: nil, paymentDate: d(2025, 7, 10), month: d(2025, 8, 1), calendar: cal), 0)
     }
 }
+
+final class CalculatorTests: XCTestCase {
+    func dec(_ s: String) -> Decimal { Decimal(string: s)! }
+    func testPlainNumberAndComma() {
+        XCTAssertEqual(Calculator.evaluate("12,5"), dec("12.5"))
+        XCTAssertFalse(Calculator.hasOperator("12,5"))
+    }
+    func testPrecedence() {
+        XCTAssertEqual(Calculator.evaluate("2+3*4"), 14)
+        XCTAssertEqual(Calculator.evaluate("10-4/2"), 8)
+        XCTAssertEqual(Calculator.evaluate("12×2−4÷2"), 22)
+    }
+    func testNegativeFirstAndBroken() {
+        XCTAssertEqual(Calculator.evaluate("-5+2"), -3)
+        XCTAssertNil(Calculator.evaluate("5+"))
+        XCTAssertNil(Calculator.evaluate("5/0"))
+        XCTAssertNil(Calculator.evaluate(""))
+    }
+    func testResultRounding() {
+        XCTAssertEqual(Calculator.resultText("10/3", currency: "BYN"), "3.33")
+        XCTAssertEqual(Calculator.resultText("1.5*2", currency: "BYN"), "3")
+        XCTAssertEqual(Calculator.resultText("1000/3", currency: "JPY"), "333")
+    }
+}

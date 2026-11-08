@@ -103,6 +103,7 @@ private struct SMSQuizStep: View {
     @Query(sort: \Category.sortID) private var cats: [Category]
     @State private var renaming = false
     @State private var newName = ""
+    @State private var pickingTransfer = false
 
     private var expenseCats: [Category] { cats.filter { !$0.isIncome && !$0.archived } }
     private var suggested: [Category] {
@@ -126,7 +127,10 @@ private struct SMSQuizStep: View {
                 Section("sms.quiz.maybe") { ForEach(maybe) { row($0) } }
             }
             Section { ForEach(expenseCats.filter { c in !maybe.contains { $0 === c } }) { row($0) } } header: { Text(restTitle) }
-            Section { Button("sms.quiz.skip", action: onSkip) }
+            Section {
+                Button("sms.quiz.skip", action: onSkip)
+                Button("sms.makeTransfer") { pickingTransfer = true }
+            } footer: { Text("sms.makeTransfer.hint") }
         }
         .themedScreen()
         .navigationTitle("sms.quiz.title")
@@ -135,6 +139,7 @@ private struct SMSQuizStep: View {
                 Button { newName = tx.payee; renaming = true } label: { Label("alias.rename", systemImage: "pencil") }
             }
         }
+        .sheet(isPresented: $pickingTransfer) { SMSTransferPicker(tx: tx) }
         .alert("alias.rename.title", isPresented: $renaming) {
             TextField("field.payee", text: $newName)
             Button("common.save") { SMSImporter.rename(payee: tx.payee, to: newName, ctx: ctx) }
@@ -195,8 +200,10 @@ private struct SMSDigestEditView: View {
     @Bindable var tx: LedgerTransaction
     @Environment(RatesStore.self) private var rates
     @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Account.sortID) private var accounts: [Account]
     @State private var name = ""
+    @State private var pickingTransfer = false
 
     var body: some View {
         Form {
@@ -221,14 +228,52 @@ private struct SMSDigestEditView: View {
                         .foregroundStyle(.orange)
                 } footer: { Text("sms.gap.hint") }
             }
+            Section {
+                Button("sms.makeTransfer") { pickingTransfer = true }
+            } footer: { Text("sms.makeTransfer.hint") }
         }
         .themedScreen()
         .navigationTitle(tx.payee)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $pickingTransfer) { SMSTransferPicker(tx: tx) { name = ""; dismiss() } }
     }
 
     private func commitName() {
         if !name.trimmingCharacters(in: .whitespaces).isEmpty { SMSImporter.rename(payee: tx.payee, to: name, ctx: ctx) }
+    }
+}
+
+// MARK: Превращение в перевод
+
+/// Выбор второго счёта, когда СМС оказалась переводом между своими счетами.
+private struct SMSTransferPicker: View {
+    let tx: LedgerTransaction
+    var onDone: () -> Void = {}
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+    @Environment(RatesStore.self) private var rates
+    @Query(sort: \Account.sortID) private var accounts: [Account]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(accounts.filter { $0 !== tx.account }) { a in
+                        Button {
+                            SMSImporter.makeTransfer(tx, with: a, ctx: ctx, rates: rates)
+                            dismiss(); onDone()
+                        } label: {
+                            HStack { Text(a.name).foregroundStyle(.primary); Spacer(); Text(a.currency).foregroundStyle(.secondary) }
+                        }
+                    }
+                } header: { Text(tx.amount < 0 ? "sms.transfer.toTitle" : "sms.transfer.fromTitle") }
+            }
+            .themedScreen()
+            .navigationTitle("sms.makeTransfer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("common.cancel") { dismiss() } } }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 
