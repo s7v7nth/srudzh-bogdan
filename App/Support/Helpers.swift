@@ -73,10 +73,9 @@ struct AmountField: View {
                             }
                             Spacer()
                             Button("=") {
-                                if let r = Calculator.resultText(text, currency: code) { text = r }
+                                if Calculator.hasOperator(text), let r = Calculator.resultText(text, currency: code) { text = r }
                             }
                             .font(.app(.title3).bold())
-                            .disabled(!Calculator.hasOperator(text))
                         }
                     }
                 }
