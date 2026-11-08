@@ -73,10 +73,18 @@ enum ChaosPalette {
     static func zone(_ tint: Color) -> some View {
         ZStack {
             LinearGradient(colors: [tint.opacity(0.18), tint.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(tint.opacity(0.22)).frame(width: 180).blur(radius: 40).offset(x: -110, y: -30)
-            Circle().fill(tint.opacity(0.14)).frame(width: 150).blur(radius: 40).offset(x: 130, y: 40)
+            // Мягкие пятна градиентом, а не размытием: размытие заново считалось на каждом кадре прокрутки.
+            spot(tint.opacity(0.22), radius: 130).offset(x: -110, y: -30)
+            spot(tint.opacity(0.14), radius: 115).offset(x: 130, y: 40)
         }
         .clipped()
+    }
+
+    private static func spot(_ color: Color, radius: CGFloat) -> some View {
+        Circle()
+            .fill(RadialGradient(stops: [.init(color: color, location: 0), .init(color: color, location: 0.3), .init(color: color.opacity(0), location: 1)],
+                                 center: .center, startRadius: 0, endRadius: radius))
+            .frame(width: radius * 2, height: radius * 2)
     }
 }
 

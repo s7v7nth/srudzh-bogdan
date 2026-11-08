@@ -17,12 +17,9 @@ struct ChaosHomeView: View {
     @AppStorage(scheduleWindowKey) private var windowDays = 7
     @AppStorage(goldRainKey) private var goldRain = true
 
-    @State private var frames: [NodeID: CGRect] = [:]
-    /// Что тащим и над чем держим. Сама точка пальца живёт в `finger`: её читает только кружок-призрак,
-    /// поэтому движение пальца не пересчитывает весь экран.
-    @State private var dragID: NodeID?
-    @State private var hovered: NodeID?
-    @State private var finger = FingerPoint()
+    /// Перетаскивание, рамки кружков и кольца бюджета во время монеток. Экран их не читает,
+    /// только кружки и мелкие модификаторы, поэтому прокрутка и движение пальца не пересчитывают суммы.
+    @State private var live = ChaosLive()
     @State private var request: AddRequest?
     @State private var showSettings = false
     @State private var showNewAccount = false
@@ -37,19 +34,7 @@ struct ChaosHomeView: View {
     @State private var pendingDrop: (source: NodeID, target: NodeID)?
     @State private var dropSaved = false
     @State private var flight: CoinFlight?
-    /// Кольцо бюджета, пока летят монетки: держит старое значение и растёт с каждой упавшей монеткой.
-    @State private var ringHold: [UUID: Double] = [:]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// Прокрутка лент и страниц: нужна, чтобы при перетаскивании докрутить до кружка за краем экрана.
-    @State private var expenseJump: PageJump?
-    @State private var zones: [Zone: CGRect] = [:]
-    @State private var autoScroll: Task<Void, Never>?
-    /// Блокировка прокрутки на время перетаскивания гасит и прокрутку из кода, поэтому на время сдвига её снимаем.
-    /// Палец уже не может подхватить ленту: её жест не начался, пока она была заблокирована.
-    @State private var autoScrolling = false
-    /// Куда докрутить ленту: запись в `scrollPosition` ленту не двигает, поэтому крутим через `ScrollViewReader`.
-    @State private var scrollTarget: [Zone: ScrollJump] = [:]
-    struct ScrollJump: Equatable { let target: PersistentIdentifier; let id = UUID() }
 
     private let circle: CGFloat = 50
     private let nodeHeight: CGFloat = 98
@@ -59,6 +44,7 @@ struct ChaosHomeView: View {
 
     enum NodeID: Hashable { case account(PersistentIdentifier), category(UUID) }
     enum Zone: Hashable { case income, accounts, expenses }
+    struct ScrollJump: Equatable { let target: PersistentIdentifier; let id = UUID() }
 
     struct AddRequest: Identifiable {
         let id = UUID()
@@ -81,53 +67,62 @@ struct ChaosHomeView: View {
     }
     private var accountList: [Account] { accounts.filter { editing || !$0.hiddenOnHome } }
 
-    /// Суммы за текущий месяц по категориям (с подкатегориями), в основной валюте.
-    private var monthTotals: [UUID: Decimal] {
-        guard let month = Calendar.current.dateInterval(of: .month, for: .now) else { return [:] }
-        var own: [UUID: Decimal] = [:]
-        for t in transactions where month.contains(t.date) {
-            // Платёж по кредиту (перевод на счёт-кредит) идёт в категорию кредита, как и в бюджете.
-            let loanCategory = t.loanPaymentCategory
-            guard t.type != .transfer || loanCategory != nil, t.account?.isLoan != true || loanCategory != nil,
-                  let id = loanCategory ?? t.category?.uuid, let v = rates.value(of: t, in: rates.base) else { continue }
-            own[id, default: 0] += abs(v)
-        }
-        var result: [UUID: Decimal] = [:]
-        for c in categories where c.parent == nil {
-            result[c.uuid] = own[c.uuid, default: 0] + c.children.reduce(Decimal(0)) { $0 + own[$1.uuid, default: 0] }
-        }
-        return result
+    /// Всё, что экран показывает в цифрах. Считается один раз за отрисовку, а не в каждом кружке и виджете.
+    private struct Stats {
+        /// Суммы за текущий месяц по категориям (с подкатегориями), в основной валюте.
+        var totals: [UUID: Decimal] = [:]
+        var monthExpenses: Decimal = 0
+        var balances: [PersistentIdentifier: Decimal] = [:]
+        var progress: [PersistentIdentifier: BudgetProgress] = [:]
+        /// Категория (и её подкатегории) → первый бюджет, который за ней следит.
+        var budgetOf: [UUID: PersistentIdentifier] = [:]
+
+        func progress(for c: Category) -> BudgetProgress? { budgetOf[c.uuid].flatMap { progress[$0] } }
+        func balance(_ a: Account) -> Decimal { balances[a.persistentModelID] ?? 0 }
     }
 
-    private var monthExpenses: Decimal {
-        guard let month = Calendar.current.dateInterval(of: .month, for: .now) else { return 0 }
-        // Платёж по кредиту трата; начальный долг и поправки на счёте-кредите нет (как и в бюджете).
-        return transactions.filter {
-            month.contains($0.date) && ($0.loanPaymentCategory != nil || ($0.type == .expense && $0.account?.isLoan != true))
+    private func makeStats() -> Stats {
+        var s = Stats()
+        if let month = Calendar.current.dateInterval(of: .month, for: .now) {
+            // Один проход по операциям вместо двух; дата проверяется первой, она дешевле связей.
+            var own: [UUID: Decimal] = [:]
+            // Платёж по кредиту (перевод на счёт-кредит) трата в категории кредита, как и в бюджете.
+            // Начальный долг и поправки на самом счёте-кредите тратами не считаются.
+            for t in transactions where month.contains(t.date) {
+                let loanCategory = t.loanPaymentCategory
+                if t.account?.isLoan == true ? loanCategory == nil : t.type == .transfer { continue }
+                let v = rates.value(of: t, in: rates.base)
+                if t.type == .expense || loanCategory != nil { s.monthExpenses += abs(v ?? 0) }
+                if let v, let id = loanCategory ?? t.category?.uuid { own[id, default: 0] += abs(v) }
+            }
+            for c in categories where c.parent == nil {
+                s.totals[c.uuid] = own[c.uuid, default: 0] + c.children.reduce(Decimal(0)) { $0 + own[$1.uuid, default: 0] }
+            }
         }
-            .reduce(Decimal(0)) { $0 + abs(rates.value(of: $1, in: rates.base) ?? 0) }
+        for a in accounts { s.balances[a.persistentModelID] = balance(of: a) }
+        for b in budgets {
+            if let p = BudgetProgress.make(b, transactions: transactions, rates: rates) { s.progress[b.persistentModelID] = p }
+            for c in b.categories { for u in c.familyIDs where s.budgetOf[u] == nil { s.budgetOf[u] = b.persistentModelID } }
+        }
+        return s
     }
 
     /// Обычно сумма основных счетов; пока зажата кнопка в углу виджета, сумма всех счетов.
-    private var netWorth: Decimal {
+    private func netWorth(_ s: Stats) -> Decimal {
         accounts.filter { showAll || $0.isPrimary }.reduce(Decimal(0)) {
-            $0 + (rates.convert(balance(of: $1), from: $1.currency, to: rates.base) ?? 0)
+            $0 + (rates.convert(s.balance($1), from: $1.currency, to: rates.base) ?? 0)
         }
     }
 
     /// Остатки всех счетов по валютам, без пересчёта по курсу.
-    private var perCurrency: [(code: String, amount: Decimal)] {
+    private func perCurrency(_ s: Stats) -> [(code: String, amount: Decimal)] {
         Dictionary(grouping: accounts, by: \.currency)
-            .map { ($0.key, $0.value.reduce(Decimal(0)) { $0 + balance(of: $1) }) }
+            .map { ($0.key, $0.value.reduce(Decimal(0)) { $0 + s.balance($1) }) }
             .sorted { $0.0 < $1.0 }
     }
 
     private func budget(for c: Category) -> Budget? {
         budgets.first(where: { $0.categories.contains { $0.uuid == c.uuid || $0.familyIDs.contains(c.uuid) } })
-    }
-
-    private func progress(for c: Category, in cache: [PersistentIdentifier: BudgetProgress]) -> BudgetProgress? {
-        budget(for: c).flatMap { cache[$0.persistentModelID] }
     }
 
     private func budgetRatio(of c: Category) -> Double? {
@@ -144,37 +139,42 @@ struct ChaosHomeView: View {
     // MARK: Экран
 
     var body: some View {
-        let totals = monthTotals
-        let cache = Dictionary(uniqueKeysWithValues: budgets.compactMap { b in
-            BudgetProgress.make(b, transactions: transactions, rates: rates).map { (b.persistentModelID, $0) }
-        })
+        let stats = makeStats()
+        let live = live
         NavigationStack {
+            // Экран рассчитан ровно на высоту телефона. Когда под окном операции поднимается клавиатура,
+            // система урезает высоту, и навигация центрировала не влезающий экран: он уезжал вверх.
+            // GeometryReader всегда кладёт содержимое от верхнего края, лишнее просто уходит вниз под окно.
+            GeometryReader { _ in
             VStack(spacing: 6) {
                 header
                 PagedStrip(count: 3) { i in
                     switch i {
-                    case 0: balanceWidget(cache)
+                    case 0: balanceWidget(stats)
                     case 1: scheduledWidget
-                    default: budgetsWidget(cache)
+                    default: budgetsWidget(stats.progress)
                     }
                 }
                 .frame(height: 152)
 
                 ribbon("chaos.zone.income", tint: ChaosPalette.income, zone: .income) {
-                    ForEach(incomeList) { c in incomeNode(c, totals) }
+                    ForEach(incomeList) { c in incomeNode(c, stats) }
                     addCell(color: ChaosPalette.incomeText) { newCategory = NewCategory(isIncome: true) }
                 }
                 ribbon("chaos.zone.accounts", tint: ChaosPalette.account, zone: .accounts) {
-                    ForEach(accountList) { a in accountNode(a) }
+                    ForEach(accountList) { a in accountNode(a, stats) }
                     addCell(color: ChaosPalette.accountText) { showNewAccount = true }
                 }
-                categoryPages(totals, cache)
+                categoryPages(stats)
                 Spacer(minLength: 0)
             }
+            }
+            .modifier(DragScrollLock(live: live))
             .coordinateSpace(name: space)
-            .onPreferenceChange(FramesKey.self) { frames = $0 }
-            .onPreferenceChange(ZonesKey.self) { zones = $0 }
-            .overlay(alignment: .topLeading) { ghost }
+            // Рамки нужны только жестам, поэтому лежат вне состояния экрана: прокрутка лент больше не перерисовывает экран.
+            .onPreferenceChange(FramesKey.self) { live.frames = $0 }
+            .onPreferenceChange(ZonesKey.self) { live.zones = $0 }
+            .overlay(alignment: .topLeading) { DragGhost(live: live, size: circle) }
             .overlay(alignment: .topLeading) {
                 if let f = flight {
                     CoinShower(flight: f, onLand: coinLanded).id(f.id).allowsHitTesting(false)
@@ -184,17 +184,23 @@ struct ChaosHomeView: View {
                 enabled: isVisible && request == nil && !showSettings && !showNewAccount && newCategory == nil
                     && editingAccount == nil && editingCategory == nil && openLoan == nil,
                 onBegan: { p in
-                    guard let id = frames.first(where: { $0.value.contains(p) })?.key else { return false }
-                    finger.point = p; hovered = nil; dragID = id; startAutoScroll(); return true
+                    guard let id = live.frames.first(where: { $0.value.contains(p) })?.key,
+                          let color = color(of: id) else { return false }
+                    live.groups = Dictionary(uniqueKeysWithValues: live.frames.keys.compactMap { k in group(k).map { (k, $0) } })
+                    live.point = p; live.hovered = nil
+                    live.ghostIcon = icon(of: id); live.ghostColor = color
+                    live.source = id
+                    startAutoScroll()
+                    return true
                 },
                 onMoved: { p in
-                    guard let id = dragID else { return }
-                    finger.point = p
+                    guard let id = live.source else { return }
+                    live.point = p
                     let h = target(at: p, excluding: id)
-                    if h != hovered { hovered = h }
+                    if h != live.hovered { live.hovered = h }
                 },
-                onEnded: { p in if let id = dragID { drop(id, at: p) }; stopAutoScroll(); dragID = nil; hovered = nil },
-                onCancelled: { stopAutoScroll(); dragID = nil; hovered = nil }
+                onEnded: { p in if let id = live.source { drop(id, at: p) }; stopAutoScroll(); live.source = nil; live.hovered = nil },
+                onCancelled: { stopAutoScroll(); live.source = nil; live.hovered = nil }
             ))
             .background(Color(.systemGroupedBackground))
             .onAppear { isVisible = true }
@@ -215,8 +221,7 @@ struct ChaosHomeView: View {
                     }
                 }
             }
-            .sensoryFeedback(.impact(weight: .medium), trigger: hovered)
-            .sensoryFeedback(.selection, trigger: dragID)
+            .modifier(DragFeedback(live: live))
         }
     }
 
@@ -251,18 +256,20 @@ struct ChaosHomeView: View {
             .padding(.horizontal, 12)
     }
 
-    private func balanceWidget(_ cache: [PersistentIdentifier: BudgetProgress]) -> some View {
+    private func balanceWidget(_ stats: Stats) -> some View {
+        let cache = stats.progress
         let left = cache.values.reduce(Decimal(0)) { $0 + (rates.convert($1.remaining, from: $1.currency, to: rates.base) ?? 0) }
+        let worth = netWorth(stats)
         return card {
             VStack(alignment: .leading, spacing: 10) {
                 Text(showAll ? "chaos.balance.all" : "chaos.balance").font(.app(.caption)).foregroundStyle(.secondary)
-                MoneyText(amount: netWorth, code: rates.base).font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(netWorth < 0 ? TxType.expense.tint : Color.primary)
+                MoneyText(amount: worth, code: rates.base).font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(worth < 0 ? TxType.expense.tint : Color.primary)
                     .contentTransition(.numericText())
                 if showAll {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 14) {
-                            ForEach(perCurrency, id: \.code) { MoneyText(amount: $0.amount, code: $0.code).font(.app(.caption, .semibold)).foregroundStyle(.secondary) }
+                            ForEach(perCurrency(stats), id: \.code) { MoneyText(amount: $0.amount, code: $0.code).font(.app(.caption, .semibold)).foregroundStyle(.secondary) }
                         }
                     }
                     .frame(height: 16)
@@ -272,7 +279,7 @@ struct ChaosHomeView: View {
                         Label { Text("chaos.expenses") + Text(verbatim: " · " + Date.now.formatted(.dateTime.month(.wide))) }
                             icon: { Image(systemName: TxType.expense.glyph) }
                             .font(.app(.caption)).foregroundStyle(TxType.expense.tint)
-                        MoneyText(amount: monthExpenses, code: rates.base).font(.app(.subheadline, .semibold))
+                        MoneyText(amount: stats.monthExpenses, code: rates.base).font(.app(.subheadline, .semibold))
                     }
                     if !cache.isEmpty {
                         VStack(alignment: .leading, spacing: 2) {
@@ -385,21 +392,16 @@ struct ChaosHomeView: View {
     }
 
     private func ribbon<C: View>(_ title: LocalizedStringKey, tint: Color, zone: Zone, @ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let row = HStack(alignment: .top, spacing: 0) { content() }
+        return VStack(alignment: .leading, spacing: 0) {
             zoneTitle(title)
-            let row = HStack(alignment: .top, spacing: 0) { content() }
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
-                    row
-                        .scrollTargetLayout().padding(.horizontal, 8)
+                    row.scrollTargetLayout().padding(.horizontal, 8)
                 }
                 .scrollTargetBehavior(.viewAligned)
                 .scrollClipDisabled()
-                .scrollDisabled(dragID != nil && !autoScrolling)
-                .onChange(of: scrollTarget[zone]) { _, jump in
-                    guard let jump else { return }
-                    withAnimation(.easeInOut(duration: 0.3)) { proxy.scrollTo(jump.target, anchor: .leading) }
-                }
+                .modifier(RibbonJump(live: live, zone: zone, proxy: proxy))
             }
             .frame(height: nodeHeight)
         }
@@ -409,22 +411,22 @@ struct ChaosHomeView: View {
         .padding(.horizontal, 12)
     }
 
-    private enum Slot { case category(Category), add }
-
     private func zoneFrame(_ zone: Zone) -> some View {
         GeometryReader { g in Color.clear.preference(key: ZonesKey.self, value: [zone: g.frame(in: .named(space))]) }
     }
 
-    private func categoryPages(_ totals: [UUID: Decimal], _ cache: [PersistentIdentifier: BudgetProgress]) -> some View {
+    private enum Slot { case category(Category), add }
+
+    private func categoryPages(_ stats: Stats) -> some View {
         let slots = expenseList.map(Slot.category) + [.add]
         let pages = stride(from: 0, to: slots.count, by: 8).map { Array(slots[$0 ..< min($0 + 8, slots.count)]) }
         return VStack(alignment: .leading, spacing: 0) {
             zoneTitle("chaos.zone.expenses")
-            PagedStrip(count: pages.count, lockScroll: dragID != nil && !autoScrolling, jump: expenseJump) { i in
+            PagedStrip(count: pages.count, jump: { [live] in live.pageJump }) { i in
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0, alignment: .top), count: 4), spacing: 4) {
                     ForEach(Array(pages[i].enumerated()), id: \.offset) { _, slot in
                         switch slot {
-                        case .category(let c): expenseNode(c, totals, cache)
+                        case .category(let c): expenseNode(c, stats)
                         case .add: addCell(color: ChaosPalette.expenseText) { newCategory = NewCategory(isIncome: false) }
                         }
                     }
@@ -452,100 +454,32 @@ struct ChaosHomeView: View {
             .frame(height: nodeHeight, alignment: .top)
             .containerRelativeFrame(.horizontal) { w, _ in (w - 16) / 4 }
         }
-        .buttonStyle(.plain).opacity(dragID == nil ? 1 : 0.3)
+        .buttonStyle(.plain).modifier(DragDim(live: live))
         .accessibilityLabel(Text("chaos.add"))
     }
 
     // MARK: Кружки
 
-    private func incomeNode(_ c: Category, _ totals: [UUID: Decimal]) -> some View {
-        node(.category(c.uuid), title: c.name, icon: c.icon, color: ChaosPalette.income, text: ChaosPalette.incomeText,
-             amount: totals[c.uuid] ?? 0, code: rates.base, hidden: c.hiddenOnHome)
+    private func incomeNode(_ c: Category, _ stats: Stats) -> some View {
+        node(.category(c.uuid), group: 1, title: c.name, icon: c.icon, color: ChaosPalette.income, text: ChaosPalette.incomeText,
+             amount: stats.totals[c.uuid] ?? 0, code: rates.base, hidden: c.hiddenOnHome)
     }
 
-    private func accountNode(_ a: Account) -> some View {
-        node(.account(a.persistentModelID), title: a.name, icon: a.kind.icon, color: ChaosPalette.account, text: ChaosPalette.accountText,
-             amount: balance(of: a), code: a.currency, hidden: a.hiddenOnHome)
+    private func accountNode(_ a: Account, _ stats: Stats) -> some View {
+        node(.account(a.persistentModelID), group: 0, title: a.name, icon: a.kind.icon, color: ChaosPalette.account, text: ChaosPalette.accountText,
+             amount: stats.balance(a), code: a.currency, hidden: a.hiddenOnHome)
     }
 
-    private func expenseNode(_ c: Category, _ totals: [UUID: Decimal], _ cache: [PersistentIdentifier: BudgetProgress]) -> some View {
-        let p = progress(for: c, in: cache)
-        return node(.category(c.uuid), title: c.name, icon: c.icon, color: ChaosPalette.expense, text: ChaosPalette.expenseText,
-                    amount: totals[c.uuid] ?? 0, code: rates.base, progress: p, ring: ringHold[c.uuid], hidden: c.hiddenOnHome)
+    private func expenseNode(_ c: Category, _ stats: Stats) -> some View {
+        node(.category(c.uuid), group: 2, title: c.name, icon: c.icon, color: ChaosPalette.expense, text: ChaosPalette.expenseText,
+             amount: stats.totals[c.uuid] ?? 0, code: rates.base, progress: stats.progress(for: c), hidden: c.hiddenOnHome)
     }
 
-    @ViewBuilder
-    private func node(_ id: NodeID, title: String, icon: String, color: Color, text: Color,
-                      amount: Decimal, code: String, progress: BudgetProgress? = nil, ring: Double? = nil, hidden: Bool) -> some View {
-        let zero = amount == 0
-        let alert = progress.map { $0.state != .ok } ?? false
-        let valueColor: Color = amount < 0 ? TxType.expense.tint : (alert ? progress!.state.tint : text)
-        let isHover = hovered == id
-        let isSource = dragID == id
-        let dimmed = dragID.map { $0 != id && !canDrop($0, onto: id) } ?? false
-        VStack(spacing: 3) {
-            Text(title).font(.app(.caption)).foregroundStyle(ChaosPalette.label).lineLimit(1).minimumScaleFactor(0.8)
-                .frame(height: 15)
-            bubble(icon: icon, color: color, progress: progress, ring: ring)
-                .opacity(zero && progress == nil ? 0.7 : 1)
-                .scaleEffect(isHover ? 1.2 : (isSource ? 0.9 : 1))
-                .overlay { if isHover { Circle().stroke(color, lineWidth: 3).frame(width: circle + 12, height: circle + 12).scaleEffect(1.2).blur(radius: 1) } }
-                .overlay(alignment: .topLeading) { if editing { hideBadge(id, hidden: hidden) } }
-                .animation(.spring(duration: 0.25), value: isHover)
-            // Пустая категория: прочерк вместо ряда «0,00», чтобы взгляд цеплялся только за реальные траты.
-            if zero, case .category = id {
-                Text(verbatim: "—").font(.app(.caption, .bold)).foregroundStyle(text).opacity(0.4)
-                    .accessibilityLabel(Text(verbatim: MoneyText.plain(0, code: code)))
-            } else {
-                MoneyText(amount: amount, code: code).font(.app(.caption, .bold)).foregroundStyle(valueColor)
-                    .brightness(amount < 0 || alert ? -0.15 : 0).opacity(zero ? 0.5 : 1).lineLimit(1).minimumScaleFactor(0.85)
-            }
-        }
-        .frame(height: nodeHeight, alignment: .top)
-        .containerRelativeFrame(.horizontal) { w, _ in (w - 16) / 4 }
-        .opacity(isSource ? 0.35 : (dimmed ? 0.4 : (hidden ? 0.45 : 1)))
-        .background(GeometryReader { g in
-            Color.clear.preference(key: FramesKey.self, value: [id: g.frame(in: .named(space))])
-        })
-        .modifier(JiggleEffect(active: editing, seed: id.hashValue))
-        .contentShape(Rectangle())
-        .onTapGesture { tap(id) }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-    }
-
-    private func hideBadge(_ id: NodeID, hidden: Bool) -> some View {
-        Button { toggleHidden(id) } label: {
-            Image(systemName: hidden ? "plus.circle.fill" : "minus.circle.fill")
-                .font(.system(size: 20)).symbolRenderingMode(.palette)
-                .foregroundStyle(.white, hidden ? BudgetState.ok.tint : BudgetState.over.tint)
-        }
-        .buttonStyle(.plain).offset(x: -2, y: -2)
-    }
-
-    /// `held` подменяет долю бюджета, пока в кружок летят монетки.
-    private func bubble(icon: String, color: Color, progress: BudgetProgress?, ring held: Double? = nil) -> some View {
-        let ring = circle + 12
-        return ZStack {
-            if let p = progress {
-                let ratio = held ?? p.ratio
-                Circle().stroke(Color.gray.opacity(0.2), lineWidth: 4).frame(width: ring, height: ring)
-                Circle().trim(from: 0, to: CGFloat(min(max(ratio, 0.02), 1)))
-                    .stroke(BudgetState(ratio: ratio).tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    .rotationEffect(.degrees(-90)).frame(width: ring, height: ring)
-            }
-            Color.clear.frame(width: circle, height: circle)
-                .overlay { Image(systemName: icon).font(.system(size: 22, weight: .medium)).foregroundStyle(.white).shadow(color: color.opacity(0.6), radius: 3, y: 1) }
-                .liquidGlass(tint: color)
-        }
-        .frame(width: ring, height: ring)
-    }
-
-    /// Кружок, который едет за пальцем (чуть выше, чтобы палец его не закрывал).
-    @ViewBuilder private var ghost: some View {
-        if let id = dragID, let color = color(of: id) {
-            DragGhost(finger: finger, icon: icon(of: id), color: color, size: circle)
-        }
+    private func node(_ id: NodeID, group: Int, title: String, icon: String, color: Color, text: Color,
+                      amount: Decimal, code: String, progress: BudgetProgress? = nil, hidden: Bool) -> some View {
+        ChaosNode(id: id, group: group, title: title, icon: icon, color: color, text: text, amount: amount, code: code,
+                  progress: progress, hidden: hidden, editing: editing, live: live, circle: circle, height: nodeHeight, space: space,
+                  onTap: { tap(id) }, onToggleHidden: { toggleHidden(id) })
     }
 
     private func center(_ finger: CGPoint) -> CGPoint { Self.center(finger) }
@@ -585,15 +519,33 @@ struct ChaosHomeView: View {
         return nil
     }
 
-    private func canDrop(_ source: NodeID, onto target: NodeID) -> Bool {
-        editing ? (group(source) != nil && group(source) == group(target)) : request(from: source, to: target) != nil
+    /// Можно ли бросить кружок группы `s` на кружок группы `t` (0 счета, 1 доходы, 2 расходы).
+    /// Совпадает с `request(from:to:)`: счёт на счёт или расход, доход на счёт; в правке только внутри группы.
+    static func canDrop(_ s: Int?, onto t: Int?, editing: Bool) -> Bool {
+        guard let s, let t else { return false }
+        if editing { return s == t }
+        return (s == 0 && (t == 0 || t == 2)) || (s == 1 && t == 0)
     }
 
+    /// Вызывается на каждое движение пальца, поэтому группы берутся из готового словаря, без поиска по базе.
     private func target(at finger: CGPoint, excluding source: NodeID) -> NodeID? {
         let p = center(finger)
         // Кружки, уехавшие за край ленты, не видны, но их рамки остаются: попадание считаем только внутри зон.
-        guard zones.values.contains(where: { $0.contains(p) }) else { return nil }
-        return frames.first { $0.key != source && $0.value.insetBy(dx: -4, dy: -4).contains(p) && canDrop(source, onto: $0.key) }?.key
+        guard live.zones.values.contains(where: { $0.contains(p) }) else { return nil }
+        let s = live.groups[source]
+        return live.frames.first {
+            $0.key != source && $0.value.insetBy(dx: -4, dy: -4).contains(p) && Self.canDrop(s, onto: live.groups[$0.key], editing: editing)
+        }?.key
+    }
+
+    private func drop(_ source: NodeID, at finger: CGPoint) {
+        guard let t = target(at: finger, excluding: source) else { return }
+        if editing { reorder(source, onto: t); return }
+        request = self.request(from: source, to: t)
+        guard request != nil else { return }
+        pendingDrop = (source, t)
+        dropSaved = false
+        if let c = category(t), let r = budgetRatio(of: c) { live.rings[c.uuid] = r }
     }
 
     // MARK: Прокрутка у края
@@ -603,35 +555,37 @@ struct ChaosHomeView: View {
 
     /// Пока кружок держат у левого или правого края ленты, она сдвигается на один кружок (страницы расходов на страницу).
     private func startAutoScroll() {
-        autoScroll?.cancel()
-        autoScroll = Task { @MainActor in
+        live.autoScroll?.cancel()
+        live.autoScroll = Task { @MainActor in
             var held = 0
             var lastEdge: (Zone, Int)?
-            while !Task.isCancelled, let id = dragID {
+            while !Task.isCancelled, let id = live.source {
                 try? await Task.sleep(for: .milliseconds(150))
-                guard let edge = edge(at: center(finger.point)) else { held = 0; lastEdge = nil; continue }
+                guard let edge = edge(at: center(live.point)) else { held = 0; lastEdge = nil; continue }
                 if let l = lastEdge, l.0 == edge.0, l.1 == edge.1 { held += 1 } else { held = 1; lastEdge = edge }
                 // Первая прокрутка через ~0,45 с, чтобы не листать, когда целятся в крайний кружок; дальше так же каждые 0,45 с.
                 guard held >= 3 else { continue }
                 held = 0
-                autoScrolling = true
+                // Блокировка прокрутки на время перетаскивания гасит и прокрутку из кода, поэтому на время сдвига её снимаем.
+                // Палец уже не может подхватить ленту: её жест не начался, пока она была заблокирована.
+                live.autoScrolling = true
                 try? await Task.sleep(for: .milliseconds(30))
                 let moved = scroll(edge.0, by: edge.1)
                 if moved { try? await Task.sleep(for: .milliseconds(350)) }
-                autoScrolling = false
+                live.autoScrolling = false
                 if moved {
                     UISelectionFeedbackGenerator().selectionChanged()
-                    let h = target(at: finger.point, excluding: id)
-                    if h != hovered { hovered = h }
+                    let h = target(at: live.point, excluding: id)
+                    if h != live.hovered { live.hovered = h }
                 }
             }
         }
     }
 
-    private func stopAutoScroll() { autoScroll?.cancel(); autoScroll = nil; autoScrolling = false }
+    private func stopAutoScroll() { live.autoScroll?.cancel(); live.autoScroll = nil; live.autoScrolling = false }
 
     private func edge(at p: CGPoint) -> (Zone, Int)? {
-        for (zone, r) in zones where p.y >= r.minY && p.y <= r.maxY {
+        for (zone, r) in live.zones where p.y >= r.minY && p.y <= r.maxY {
             if p.x < r.minX + edgeWidth { return (zone, -1) }
             if p.x > r.maxX - edgeWidth { return (zone, 1) }
         }
@@ -644,13 +598,13 @@ struct ChaosHomeView: View {
         case .income: return shift(.income, items: incomeList.map { ($0.persistentModelID, NodeID.category($0.uuid)) }, by: step)
         case .accounts: return shift(.accounts, items: accountList.map { ($0.persistentModelID, NodeID.account($0.persistentModelID)) }, by: step)
         case .expenses:
-            guard let left = zones[.expenses]?.minX else { return false }
+            guard let left = live.zones[.expenses]?.minX else { return false }
             let pages = (expenseList.count + 1 + 7) / 8
-            let first = expenseList.firstIndex { frames[.category($0.uuid)].map { $0.midX > left } ?? false } ?? 0
+            let first = expenseList.firstIndex { live.frames[.category($0.uuid)].map { $0.midX > left } ?? false } ?? 0
             let now = first / 8
             let next = min(max(now + step, 0), max(pages - 1, 0))
             guard next != now else { return false }
-            expenseJump = PageJump(page: next)
+            live.pageJump = PageJump(page: next)
             return true
         }
     }
@@ -658,29 +612,19 @@ struct ChaosHomeView: View {
     /// В ленте видно 4 ячейки, последняя ячейка «плюс»: левым может стоять кружок не дальше `ids.count + 1 - 4`.
     /// Текущий левый кружок берём по рамкам на экране: так верно и после ручной прокрутки.
     private func shift(_ zone: Zone, items: [(id: PersistentIdentifier, node: NodeID)], by step: Int) -> Bool {
-        guard let left = zones[zone]?.minX else { return false }
-        let now = items.firstIndex { frames[$0.node].map { $0.midX > left } ?? false } ?? 0
+        guard let left = live.zones[zone]?.minX else { return false }
+        let now = items.firstIndex { live.frames[$0.node].map { $0.midX > left } ?? false } ?? 0
         let next = min(max(now + step, 0), max(items.count + 1 - 4, 0))
         guard next != now, items.indices.contains(next) else { return false }
-        scrollTarget[zone] = ScrollJump(target: items[next].id)
+        live.jumps[zone] = ScrollJump(target: items[next].id)
         return true
-    }
-
-    private func drop(_ source: NodeID, at finger: CGPoint) {
-        guard let t = target(at: finger, excluding: source) else { return }
-        if editing { reorder(source, onto: t); return }
-        request = self.request(from: source, to: t)
-        guard request != nil else { return }
-        pendingDrop = (source, t)
-        dropSaved = false
-        if let c = category(t), let r = budgetRatio(of: c) { ringHold[c.uuid] = r }
     }
 
     // MARK: Монетки
 
     /// Центр кружка внутри ячейки: под подписью высотой 15 и отступом 3.
     private func bubbleCenter(_ id: NodeID) -> CGPoint? {
-        frames[id].map { CGPoint(x: $0.midX, y: $0.minY + 18 + (circle + 12) / 2) }
+        live.frames[id].map { CGPoint(x: $0.midX, y: $0.minY + 18 + (circle + 12) / 2) }
     }
 
     /// Окно операции закрылось: если сохранили, запускаем монетки, если отменили, возвращаем кольцо как было.
@@ -689,14 +633,14 @@ struct ChaosHomeView: View {
         pendingDrop = nil
         let saved = dropSaved
         dropSaved = false
-        let held = category(d.target).flatMap { c in ringHold[c.uuid].map { (c, $0) } }
+        let held = category(d.target).flatMap { c in live.rings[c.uuid].map { (c, $0) } }
         guard saved, let from = bubbleCenter(d.source), let to = bubbleCenter(d.target) else {
-            if let (c, _) = held { ringHold[c.uuid] = nil }
+            if let (c, _) = held { live.rings[c.uuid] = nil }
             return
         }
         let end = held.flatMap { budgetRatio(of: $0.0) }
         if reduceMotion || !goldRain {
-            if let (c, _) = held { withAnimation(.snappy) { ringHold[c.uuid] = nil } }
+            if let (c, _) = held { withAnimation(.snappy) { live.rings[c.uuid] = nil } }
             return
         }
         flight = CoinFlight(from: from, to: to, count: 9, category: held?.0.uuid, start: held?.1 ?? 0, end: end ?? 0)
@@ -708,10 +652,10 @@ struct ChaosHomeView: View {
         Haptics.coin()
         if let u = f.category {
             let k = Double(index + 1) / Double(f.count)
-            withAnimation(.snappy(duration: 0.2)) { ringHold[u] = f.start + (f.end - f.start) * k }
+            withAnimation(.snappy(duration: 0.2)) { live.rings[u] = f.start + (f.end - f.start) * k }
         }
         if index == f.count - 1 {
-            if let u = f.category { ringHold[u] = nil }
+            if let u = f.category { live.rings[u] = nil }
             flight = nil
         }
     }
@@ -750,37 +694,181 @@ struct ChaosHomeView: View {
         }
     }
 
-    private struct ZonesKey: PreferenceKey {
+    fileprivate struct ZonesKey: PreferenceKey {
         static let defaultValue: [Zone: CGRect] = [:]
         static func reduce(value: inout [Zone: CGRect], nextValue: () -> [Zone: CGRect]) { value.merge(nextValue()) { $1 } }
     }
 
-    private struct FramesKey: PreferenceKey {
+    fileprivate struct FramesKey: PreferenceKey {
         static let defaultValue: [NodeID: CGRect] = [:]
         static func reduce(value: inout [NodeID: CGRect], nextValue: () -> [NodeID: CGRect]) { value.merge(nextValue()) { $1 } }
     }
 }
 
-/// Горизонтальные страницы с точками внизу.
-/// Точка пальца при перетаскивании. Отдельный объект, чтобы её изменения перерисовывали только призрак.
-@Observable final class FingerPoint {
+/// Быстро меняющееся состояние главного экрана. Каждое свойство читают только те кусочки, которым оно нужно:
+/// точку пальца только призрак, цель под пальцем только кружки. Сам экран с суммами при этом не пересчитывается.
+@Observable final class ChaosLive {
+    /// Что тащим и над чем держим.
+    var source: ChaosHomeView.NodeID?
+    var hovered: ChaosHomeView.NodeID?
     var point: CGPoint = .zero
+    var ghostIcon = "circle"
+    var ghostColor = Color.clear
+    /// Кольцо бюджета, пока летят монетки: держит старое значение и растёт с каждой упавшей монеткой.
+    var rings: [UUID: Double] = [:]
+    /// Рамки кружков меняются на каждом кадре прокрутки, а нужны только жестам: их никто не отслеживает.
+    @ObservationIgnored var frames: [ChaosHomeView.NodeID: CGRect] = [:]
+    /// Группа каждого кружка на время перетаскивания (0 счета, 1 доходы, 2 расходы).
+    @ObservationIgnored var groups: [ChaosHomeView.NodeID: Int] = [:]
+    /// Рамки зон (лент и страниц расходов): у их краёв лента листается сама.
+    @ObservationIgnored var zones: [ChaosHomeView.Zone: CGRect] = [:]
+    @ObservationIgnored var autoScroll: Task<Void, Never>?
+    /// Пока идёт сдвиг ленты из кода, блокировка прокрутки снята.
+    var autoScrolling = false
+    /// Куда докрутить ленту или страницы расходов. Запись в `scrollPosition` ленту не двигает, поэтому крутим через `ScrollViewReader`.
+    var jumps: [ChaosHomeView.Zone: ChaosHomeView.ScrollJump] = [:]
+    var pageJump: PageJump?
 }
 
+/// Докручивает ленту, когда перетаскивание просит сдвиг. Отдельный модификатор, чтобы сдвиг не перерисовывал весь экран.
+private struct RibbonJump: ViewModifier {
+    let live: ChaosLive
+    let zone: ChaosHomeView.Zone
+    let proxy: ScrollViewProxy
+    func body(content: Content) -> some View {
+        content.onChange(of: live.jumps[zone]) { _, jump in
+            guard let jump else { return }
+            withAnimation(.easeInOut(duration: 0.3)) { proxy.scrollTo(jump.target, anchor: .leading) }
+        }
+    }
+}
+
+/// Кружок, который едет за пальцем (чуть выше, чтобы палец его не закрывал).
 private struct DragGhost: View {
-    let finger: FingerPoint
-    let icon: String
-    let color: Color
+    let live: ChaosLive
     let size: CGFloat
 
     var body: some View {
-        Color.clear.frame(width: size, height: size)
-            .overlay { Image(systemName: icon).font(.system(size: 22, weight: .medium)).foregroundStyle(.white) }
-            .liquidGlass(tint: color)
-            .shadow(color: color.opacity(0.4), radius: 12, y: 8)
-            .scaleEffect(1.1)
-            .position(ChaosHomeView.center(finger.point))
-            .allowsHitTesting(false)
+        if live.source != nil {
+            Color.clear.frame(width: size, height: size)
+                .overlay { Image(systemName: live.ghostIcon).font(.system(size: 22, weight: .medium)).foregroundStyle(.white) }
+                .liquidGlass(tint: live.ghostColor)
+                .shadow(color: live.ghostColor.opacity(0.4), radius: 12, y: 8)
+                .scaleEffect(1.1)
+                .position(ChaosHomeView.center(live.point))
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+/// Пока тащим кружок, ленты и страницы не прокручиваются.
+private struct DragScrollLock: ViewModifier {
+    let live: ChaosLive
+    func body(content: Content) -> some View { content.scrollDisabled(live.source != nil && !live.autoScrolling) }
+}
+
+/// Кнопки «+» бледнеют, пока тащим кружок.
+private struct DragDim: ViewModifier {
+    let live: ChaosLive
+    func body(content: Content) -> some View { content.opacity(live.source == nil ? 1 : 0.3) }
+}
+
+/// Отклик вибрацией: подхватили кружок, навели на цель.
+private struct DragFeedback: ViewModifier {
+    let live: ChaosLive
+    func body(content: Content) -> some View {
+        content
+            .sensoryFeedback(.impact(weight: .medium), trigger: live.hovered)
+            .sensoryFeedback(.selection, trigger: live.source)
+    }
+}
+
+/// Один кружок: подпись, стеклянный шарик с кольцом бюджета и сумма.
+/// Отдельный вид, чтобы наведение пальца перерисовывало только кружки, а не весь экран.
+private struct ChaosNode: View {
+    let id: ChaosHomeView.NodeID
+    let group: Int
+    let title: String
+    let icon: String
+    let color: Color
+    let text: Color
+    let amount: Decimal
+    let code: String
+    let progress: BudgetProgress?
+    let hidden: Bool
+    let editing: Bool
+    let live: ChaosLive
+    let circle: CGFloat
+    let height: CGFloat
+    let space: String
+    let onTap: () -> Void
+    let onToggleHidden: () -> Void
+
+    var body: some View {
+        let zero = amount == 0
+        let alert = progress.map { $0.state != .ok } ?? false
+        let valueColor: Color = amount < 0 ? TxType.expense.tint : (alert ? progress!.state.tint : text)
+        let isHover = live.hovered == id
+        let isSource = live.source == id
+        let dimmed = live.source.map { $0 != id && !ChaosHomeView.canDrop(live.groups[$0], onto: group, editing: editing) } ?? false
+        VStack(spacing: 3) {
+            Text(title).font(.app(.caption)).foregroundStyle(ChaosPalette.label).lineLimit(1).minimumScaleFactor(0.8)
+                .frame(height: 15)
+            bubble(ring: progress == nil ? nil : uuid.flatMap { live.rings[$0] })
+                .opacity(zero && progress == nil ? 0.7 : 1)
+                .scaleEffect(isHover ? 1.2 : (isSource ? 0.9 : 1))
+                .overlay { if isHover { Circle().stroke(color, lineWidth: 3).frame(width: circle + 12, height: circle + 12).scaleEffect(1.2).blur(radius: 1) } }
+                .overlay(alignment: .topLeading) { if editing { hideBadge } }
+                .animation(.spring(duration: 0.25), value: isHover)
+            // Пустая категория: прочерк вместо ряда «0,00», чтобы взгляд цеплялся только за реальные траты.
+            if zero, case .category = id {
+                Text(verbatim: "—").font(.app(.caption, .bold)).foregroundStyle(text).opacity(0.4)
+                    .accessibilityLabel(Text(verbatim: MoneyText.plain(0, code: code)))
+            } else {
+                MoneyText(amount: amount, code: code).font(.app(.caption, .bold)).foregroundStyle(valueColor)
+                    .brightness(amount < 0 || alert ? -0.15 : 0).opacity(zero ? 0.5 : 1).lineLimit(1).minimumScaleFactor(0.85)
+            }
+        }
+        .frame(height: height, alignment: .top)
+        .containerRelativeFrame(.horizontal) { w, _ in (w - 16) / 4 }
+        .opacity(isSource ? 0.35 : (dimmed ? 0.4 : (hidden ? 0.45 : 1)))
+        .background(GeometryReader { g in
+            Color.clear.preference(key: ChaosHomeView.FramesKey.self, value: [id: g.frame(in: .named(space))])
+        })
+        .modifier(JiggleEffect(active: editing, seed: id.hashValue))
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onTap)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var uuid: UUID? { if case .category(let u) = id { u } else { nil } }
+
+    private var hideBadge: some View {
+        Button(action: onToggleHidden) {
+            Image(systemName: hidden ? "plus.circle.fill" : "minus.circle.fill")
+                .font(.system(size: 20)).symbolRenderingMode(.palette)
+                .foregroundStyle(.white, hidden ? BudgetState.ok.tint : BudgetState.over.tint)
+        }
+        .buttonStyle(.plain).offset(x: -2, y: -2)
+    }
+
+    /// `held` подменяет долю бюджета, пока в кружок летят монетки.
+    private func bubble(ring held: Double?) -> some View {
+        let ring = circle + 12
+        return ZStack {
+            if let p = progress {
+                let ratio = held ?? p.ratio
+                Circle().stroke(Color.gray.opacity(0.2), lineWidth: 4).frame(width: ring, height: ring)
+                Circle().trim(from: 0, to: CGFloat(min(max(ratio, 0.02), 1)))
+                    .stroke(BudgetState(ratio: ratio).tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .rotationEffect(.degrees(-90)).frame(width: ring, height: ring)
+            }
+            Color.clear.frame(width: circle, height: circle)
+                .overlay { Image(systemName: icon).font(.system(size: 22, weight: .medium)).foregroundStyle(.white).shadow(color: color.opacity(0.6), radius: 3, y: 1) }
+                .liquidGlass(tint: color)
+        }
+        .frame(width: ring, height: ring)
     }
 }
 
@@ -789,11 +877,12 @@ struct PageJump: Equatable {
     let id = UUID()
 }
 
+/// Горизонтальные страницы с точками внизу.
 struct PagedStrip<Content: View>: View {
     let count: Int
     var lockScroll = false
-    /// Перелистывание снаружи (кружок держат у края страницы).
-    var jump: PageJump? = nil
+    /// Перелистывание снаружи (кружок держат у края страницы). Читается внутри, чтобы не перерисовывать родителя.
+    var jump: (() -> PageJump?)? = nil
     @ViewBuilder let content: (Int) -> Content
     @State private var page: Int? = 0
 
@@ -808,17 +897,17 @@ struct PagedStrip<Content: View>: View {
                     }
                     .scrollTargetLayout()
                 }
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(id: $page)
+                .scrollClipDisabled()
+                .scrollDisabled(lockScroll)
                 // Запись в `scrollPosition` страницу не двигает, поэтому листаем через `ScrollViewReader`.
-                .onChange(of: jump) { _, j in
+                .onChange(of: jump?()) { _, j in
                     guard let j else { return }
                     page = j.page
                     withAnimation(.easeInOut(duration: 0.3)) { proxy.scrollTo(j.page, anchor: .leading) }
                 }
             }
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $page)
-            .scrollClipDisabled()
-            .scrollDisabled(lockScroll)
             if count > 1 {
                 HStack(spacing: 6) {
                     ForEach(0 ..< count, id: \.self) { i in
