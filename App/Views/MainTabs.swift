@@ -42,7 +42,8 @@ struct MainTabs<Page: View>: View {
         let current = i == selection
         let moving = current || i == from
         let side: CGFloat = current ? 0 : (i < selection ? -1 : 1)
-        return page(i)
+        return PageHost(id: i, page: page).equatable()
+            .environment(\.tabActive, current)
             .offset(x: reduceMotion ? 0 : side * width)
             .opacity(reduceMotion && !current ? 0 : 1)
             // Экраны, которые не участвуют в перелёте, перескакивают на свою сторону мгновенно и за краем,
@@ -65,7 +66,7 @@ struct MainTabs<Page: View>: View {
 
     private func go(to i: Int) {
         opened.insert(selection)
-        withAnimation(Motion.large) {
+        withAnimation(Motion.standard) {
             from = selection
             selection = i
         }
@@ -96,6 +97,25 @@ struct MainTabs<Page: View>: View {
         .modifier(BarGlass())
         // Чуть заходит на полосу «домой», как системная панель: так она не висит над краем.
         .padding(.horizontal, 16).padding(.bottom, -12)
+    }
+}
+
+/// Экран вкладки. Сравнивается только по номеру: когда меняется выбранная вкладка, панель перерисовывается,
+/// а сами экраны нет. Раньше каждое переключение заново пересчитывало все открытые экраны.
+private struct PageHost<Page: View>: View, Equatable {
+    let id: Int
+    let page: (Int) -> Page
+    static func == (l: Self, r: Self) -> Bool { l.id == r.id }
+    var body: some View { page(id) }
+}
+
+private struct TabActiveKey: EnvironmentKey { static let defaultValue = true }
+
+extension EnvironmentValues {
+    /// Экран сейчас на виду (выбрана его вкладка). Вне нижней панели всегда true.
+    var tabActive: Bool {
+        get { self[TabActiveKey.self] }
+        set { self[TabActiveKey.self] = newValue }
     }
 }
 

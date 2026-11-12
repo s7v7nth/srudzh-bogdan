@@ -45,6 +45,7 @@
 		89A527B75EF2E1CCE68665D9 /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E99F2698CEFADCD0A44C2D3 /* AccountsView.swift */; };
 		8BDA2B76D4E2FA14103B3E5B /* LedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = 76AD14E3CB339D9439FB1985 /* LedgerCore */; };
 		949597662E974215927E150D /* ChaosHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0448F648CE708CDBDE04E747 /* ChaosHomeView.swift */; };
+		95EEF80D56DDD1069ED346EC /* LedgerStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ADA3D32EAFC502BD045B468 /* LedgerStats.swift */; };
 		9A011AA9919F6D4E7F129822 /* RatesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08C156CADCD98F8D04E0926A /* RatesStore.swift */; };
 		9AE90A9EEDC94EA6A9B5E0D5 /* Scheduling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40560DB3DF4FDD56533053CE /* Scheduling.swift */; };
 		A12C588C0EFB5D9FA1C67304 /* OnbSummaryStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 631052F70952E945E12A9A2E /* OnbSummaryStep.swift */; };
@@ -99,6 +100,7 @@
 		40560DB3DF4FDD56533053CE /* Scheduling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scheduling.swift; sourceTree = "<group>"; };
 		405FE2A9ABDA2CF43A888D72 /* AddTransactionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTransactionView.swift; sourceTree = "<group>"; };
 		4A17B6D2203E152A8B915F92 /* Manrope-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraBold.ttf"; sourceTree = "<group>"; };
+		4ADA3D32EAFC502BD045B468 /* LedgerStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerStats.swift; sourceTree = "<group>"; };
 		52B1A832EBC2057F5A980213 /* HabitsReports.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabitsReports.swift; sourceTree = "<group>"; };
 		57820428B34AC89AEC520E29 /* DebtView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebtView.swift; sourceTree = "<group>"; };
 		57EF4DE0871B6EF1FD221720 /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
@@ -231,6 +233,7 @@
 				AABD1059774D7CEEAA0AC074 /* EveningNotifier.swift */,
 				BD6D434917266A6E854F1C29 /* Helpers.swift */,
 				37C5F964276E72BFE4ABEB12 /* ImportStyle.swift */,
+				4ADA3D32EAFC502BD045B468 /* LedgerStats.swift */,
 				B008CDE08E8F0EF95A3F1BA4 /* Models.swift */,
 				D94FC50C79D6050C70AD264B /* MoneyText.swift */,
 				08C156CADCD98F8D04E0926A /* RatesStore.swift */,
@@ -415,6 +418,7 @@
 				F2AE89392B15A22B3A1BD3F8 /* Helpers.swift in Sources */,
 				ABF5FA30D8A76343DA7EBDE2 /* ImportStyle.swift in Sources */,
 				E899911395385D782F1AB4C1 /* IncomeExpenseReport.swift in Sources */,
+				95EEF80D56DDD1069ED346EC /* LedgerStats.swift in Sources */,
 				41A458A017E18035156E2F31 /* LoanView.swift in Sources */,
 				C307F1B394F602130D5DDC51 /* MainTabs.swift in Sources */,
 				675EC1AA2DFF5EA48B618BB4 /* Models.swift in Sources */,

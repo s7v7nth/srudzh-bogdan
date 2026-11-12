@@ -12,7 +12,6 @@ struct ChaosHomeView: View {
     @Query(sort: \Account.sortID) private var accounts: [Account]
     @Query(sort: \Category.sortID) private var categories: [Category]
     @Query private var budgets: [Budget]
-    @Query private var transactions: [LedgerTransaction]
     @Query(sort: \RecurringTransaction.nextDate) private var recurring: [RecurringTransaction]
     @AppStorage(scheduleWindowKey) private var windowDays = 7
     @AppStorage(goldRainKey) private var goldRain = true
@@ -68,45 +67,8 @@ struct ChaosHomeView: View {
     }
     private var accountList: [Account] { accounts.filter { editing || !$0.hiddenOnHome } }
 
-    /// Всё, что экран показывает в цифрах. Считается один раз за отрисовку, а не в каждом кружке и виджете.
-    private struct Stats {
-        /// Суммы за текущий месяц по категориям (с подкатегориями), в основной валюте.
-        var totals: [UUID: Decimal] = [:]
-        var monthExpenses: Decimal = 0
-        var balances: [PersistentIdentifier: Decimal] = [:]
-        var progress: [PersistentIdentifier: BudgetProgress] = [:]
-        /// Категория (и её подкатегории) → первый бюджет, который за ней следит.
-        var budgetOf: [UUID: PersistentIdentifier] = [:]
-
-        func progress(for c: Category) -> BudgetProgress? { budgetOf[c.uuid].flatMap { progress[$0] } }
-        func balance(_ a: Account) -> Decimal { balances[a.persistentModelID] ?? 0 }
-    }
-
-    private func makeStats() -> Stats {
-        var s = Stats()
-        if let month = Calendar.current.dateInterval(of: .month, for: .now) {
-            // Один проход по операциям вместо двух; дата проверяется первой, она дешевле связей.
-            var own: [UUID: Decimal] = [:]
-            // Платёж по кредиту (перевод на счёт-кредит) трата в категории кредита, как и в бюджете.
-            // Начальный долг и поправки на самом счёте-кредите тратами не считаются.
-            for t in transactions where month.contains(t.date) {
-                let loanCategory = t.loanPaymentCategory
-                if t.account?.isLoan == true ? loanCategory == nil : t.type == .transfer { continue }
-                let v = rates.value(of: t, in: rates.base)
-                if t.type == .expense || loanCategory != nil { s.monthExpenses += abs(v ?? 0) }
-                if let v, let id = loanCategory ?? t.category?.uuid { own[id, default: 0] += abs(v) }
-            }
-            for c in categories where c.parent == nil {
-                s.totals[c.uuid] = own[c.uuid, default: 0] + c.children.reduce(Decimal(0)) { $0 + own[$1.uuid, default: 0] }
-            }
-        }
-        for a in accounts { s.balances[a.persistentModelID] = balance(of: a) }
-        for b in budgets {
-            if let p = BudgetProgress.make(b, transactions: transactions, rates: rates) { s.progress[b.persistentModelID] = p }
-            for c in b.categories { for u in c.familyIDs where s.budgetOf[u] == nil { s.budgetOf[u] = b.persistentModelID } }
-        }
-        return s
-    }
+    /// Всё, что экран показывает в цифрах, приходит из общего расчёта (`StatsStore`).
+    private typealias Stats = LedgerStats
 
     /// Обычно сумма основных счетов; пока зажата кнопка в углу виджета, сумма всех счетов.
     private func netWorth(_ s: Stats) -> Decimal {
@@ -126,8 +88,12 @@ struct ChaosHomeView: View {
         budgets.first(where: { $0.categories.contains { $0.uuid == c.uuid || $0.familyIDs.contains(c.uuid) } })
     }
 
+    /// Свежий расчёт прямо из базы: общий расчёт обновится только на следующем кадре,
+    /// а монеткам цифра после сохранения нужна сразу. Вызывается один раз на перетаскивание.
     private func budgetRatio(of c: Category) -> Double? {
-        budget(for: c).flatMap { BudgetProgress.make($0, transactions: transactions, rates: rates)?.ratio }
+        guard let b = budget(for: c) else { return nil }
+        let all = (try? ctx.fetch(FetchDescriptor<LedgerTransaction>())) ?? []
+        return BudgetProgress.make(b, transactions: all, rates: rates)?.ratio
     }
 
     /// Платежи по расписанию, которые пора провести: просроченные и те, что попадают в выбранный период.
@@ -140,7 +106,7 @@ struct ChaosHomeView: View {
     // MARK: Экран
 
     var body: some View {
-        let stats = makeStats()
+        let stats = StatsStore.shared.value
         let live = live
         NavigationStack {
             // Экран рассчитан ровно на высоту телефона. Когда под окном операции поднимается клавиатура,
@@ -153,7 +119,7 @@ struct ChaosHomeView: View {
                     switch i {
                     case 0: balanceWidget(stats)
                     case 1: scheduledWidget
-                    default: budgetsWidget(stats.progress)
+                    default: budgetsWidget(stats)
                     }
                 }
                 .frame(height: 152)
@@ -360,8 +326,8 @@ struct ChaosHomeView: View {
         }
     }
 
-    private func budgetsWidget(_ cache: [PersistentIdentifier: BudgetProgress]) -> some View {
-        let rows = budgets.compactMap { b in cache[b.persistentModelID].map { (b, $0) } }
+    private func budgetsWidget(_ stats: Stats) -> some View {
+        let rows = budgets.compactMap { b in stats.progress(of: b).map { (b, $0) } }
             .sorted { $0.1.ratio > $1.1.ratio }.prefix(3)
         return card {
             VStack(alignment: .leading, spacing: 8) {
@@ -548,7 +514,7 @@ struct ChaosHomeView: View {
         guard request != nil else { return }
         pendingDrop = (source, t)
         dropSaved = false
-        if let c = category(t), let r = budgetRatio(of: c) { live.rings[c.uuid] = r }
+        if let c = category(t), let r = StatsStore.shared.value.progress(for: c)?.ratio { live.rings[c.uuid] = r }
     }
 
     // MARK: Прокрутка у края

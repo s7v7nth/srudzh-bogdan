@@ -6,7 +6,6 @@ struct BudgetsView: View {
     @Environment(\.modelContext) private var ctx
     @Environment(RatesStore.self) private var rates
     @Query private var budgets: [Budget]
-    @Query private var transactions: [LedgerTransaction]
     @State private var showNew = false
     @State private var editing: Budget?
     @State private var opened: Budget?
@@ -18,7 +17,7 @@ struct BudgetsView: View {
                     ContentUnavailableView("budgets.empty", systemImage: "chart.pie", description: Text("budgets.emptyHint"))
                 }
                 ForEach(budgets) { b in
-                    row(b).contentShape(Rectangle()).onTapGesture { opened = b }
+                    Button { opened = b } label: { row(b) }.buttonStyle(RowPress())
                         .contextMenu { Button("common.edit", systemImage: "pencil") { editing = b } }
                 }.onDelete { for i in $0 { ctx.delete(budgets[i]) }; Haptics.delete() }
             }
@@ -34,7 +33,7 @@ struct BudgetsView: View {
     }
 
     @ViewBuilder private func row(_ b: Budget) -> some View {
-        if let r = BudgetProgress.make(b, transactions: transactions, rates: rates) {
+        if let r = StatsStore.shared.value.progress(of: b) {
             let state = r.state
             VStack(alignment: .leading, spacing: 6) {
                 HStack {

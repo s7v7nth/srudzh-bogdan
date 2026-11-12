@@ -110,15 +110,16 @@ struct CategoriesView: View {
     }
 
     private func row(_ c: Category) -> some View {
-        HStack {
-            CategoryBadge(category: c, size: 30)
-            Text(c.name)
-            if c.archived { Text("category.archived").font(.app(.caption)).foregroundStyle(.secondary) }
-            Spacer()
+        Button { editing = c } label: {
+            HStack {
+                CategoryBadge(category: c, size: 30)
+                Text(c.name)
+                if c.archived { Text("category.archived").font(.app(.caption)).foregroundStyle(.secondary) }
+                Spacer()
+            }
+            .opacity(c.archived ? 0.5 : 1)
         }
-        .opacity(c.archived ? 0.5 : 1)
-        .contentShape(Rectangle())
-        .onTapGesture { editing = c }
+        .buttonStyle(RowPress())
         .swipeActions {
             Button("common.delete", role: .destructive) { deleting = c }.tint(.red)
             Button("common.edit") { editing = c }.tint(.blue)

@@ -136,7 +136,7 @@ struct TxTypeBadge: View {
 }
 
 /// Сколько потрачено и каков лимит по бюджету в текущем периоде.
-struct BudgetProgress {
+struct BudgetProgress: Equatable {
     let spent: Decimal
     let limit: Decimal
     let remaining: Decimal
@@ -188,6 +188,17 @@ extension View {
     /// Фон экрана со списком: цвет темы вместо системного серого.
     func themedScreen() -> some View {
         self.scrollContentBackground(.hidden).background(Theme.bg.ignoresSafeArea())
+    }
+}
+
+/// Отклик строки на палец: гаснет в момент касания и плавно возвращается.
+/// Возврат плавный нарочно: даже очень короткое касание успевает показать, что строка его приняла.
+struct RowPress: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.45 : 1)
+            .animation(configuration.isPressed ? nil : .easeOut(duration: 0.3), value: configuration.isPressed)
     }
 }
 

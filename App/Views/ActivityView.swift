@@ -8,11 +8,11 @@ struct ActivityView: View {
     var account: Account? = nil
     /// Если задан, показываются только операции из категорий бюджета (как он их считает).
     var budget: Budget? = nil
-    @State private var search = ""
+    /// Текст в поле поиска и открытые окна лежат вне состояния экрана: набор букв и нажатие на строку
+    /// не заставляют заново перебирать все операции. Список перестраивается, когда меняется `query`.
+    @State private var ui = ActivityUI()
     @State private var typeFilter: TxType?
-    @State private var editing: LedgerTransaction?
-    @State private var editingAccount: Account?
-    @State private var editingBudget: Budget?
+    private var search: String { ui.query }
 
     /// Один проход по всем операциям вместо трёх отдельных фильтров.
     private var filtered: [LedgerTransaction] {
@@ -38,7 +38,7 @@ struct ActivityView: View {
     }
 
     var body: some View {
-        let list = filtered
+        let list = perf("activity") { filtered }
         let content = List {
             Section {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -54,9 +54,9 @@ struct ActivityView: View {
             }
             ForEach(days(list), id: \.0) { day, items in
                 Section {
-                    ForEach(items) { t in row(t).contentShape(Rectangle()).onTapGesture { editing = t }.swipeActions { Button("common.delete") { remove(t) }.tint(.red) } }
+                    ForEach(items) { t in Button { ui.editing = t } label: { row(t) }.buttonStyle(RowPress()).swipeActions { Button("common.delete") { remove(t) }.tint(.red) } }
                 } header: {
-                    dayHeader(day, items)
+                    DayHeader(day: day, items: items)
                 }
             }
         }
@@ -64,18 +64,14 @@ struct ActivityView: View {
         // Список сам плавно убирает удалённую строку (и пустой день целиком), а при поиске строки не разъезжаются.
         .animation(search.isEmpty ? Motion.standard : nil, value: list.map(\.persistentModelID))
         // Поле поиска всегда сверху под заголовком: на iOS 26 системное место внизу закрыто нашей панелью вкладок.
-        .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: Text("activity.search"))
+        .searchable(text: Binding(get: { ui.text }, set: { ui.type($0) }), placement: .navigationBarDrawer(displayMode: .always), prompt: Text("activity.search"))
         .themedScreen()
         .navigationTitle(budget?.name ?? account?.name ?? String(localized: "tab.activity"))
         .toolbar {
-            if let account { Button("common.edit") { editingAccount = account } }
-            if let budget { Button("common.edit") { editingBudget = budget } }
+            if let account { Button("common.edit") { ui.editingAccount = account } }
+            if let budget { Button("common.edit") { ui.editingBudget = budget } }
         }
-        .sheet(item: $editingAccount) { AccountFormView(account: $0, nextSort: $0.sortID) }
-        .sheet(item: $editingBudget) { NewBudgetView(budget: $0) }
-        .sheet(item: $editing) { t in
-            AddTransactionView(editing: t, partner: t.transferID.flatMap { id in all.first { $0.transferID == id && $0 !== t } })
-        }
+        .modifier(ActivitySheets(ui: ui))
 
         if account == nil && budget == nil { NavigationStack { content } } else { content }
     }
@@ -88,18 +84,6 @@ struct ActivityView: View {
         if a.isLoan ? loanCategory == nil : t.type == .transfer { return false }
         guard let id = loanCategory ?? t.category?.uuid else { return ids.isEmpty }
         return ids.isEmpty || ids.contains(id)
-    }
-
-    /// Дата дня и итог за день в основной валюте. Переводы между своими счетами в сумме взаимно гасятся.
-    private func dayHeader(_ day: Date, _ items: [LedgerTransaction]) -> some View {
-        let total = items.reduce(Decimal(0)) { $0 + (rates.value(of: $1, in: rates.base) ?? 0) }
-        return HStack {
-            Text(day.formatted(date: .complete, time: .omitted))
-            Spacer()
-            if total != 0 {
-                MoneyText(amount: total, code: rates.base, colored: true, signed: true, weight: .semibold)
-            }
-        }
     }
 
     private func chip(_ type: TxType?) -> some View {
@@ -149,5 +133,69 @@ struct ActivityView: View {
     private func remove(_ t: LedgerTransaction) {
         if let id = t.transferID { all.filter { $0.transferID == id }.forEach(ctx.delete) } else { ctx.delete(t) }
         Haptics.delete()
+    }
+}
+
+/// Поиск и открытые окна экрана операций.
+@MainActor @Observable final class ActivityUI {
+    /// Что набрано в поле поиска прямо сейчас.
+    private(set) var text = ""
+    /// Что ищем: догоняет `text` после короткой паузы в наборе.
+    private(set) var query = ""
+    var editing: LedgerTransaction?
+    var editingAccount: Account?
+    var editingBudget: Budget?
+    @ObservationIgnored private var pending: Task<Void, Never>?
+
+    func type(_ new: String) {
+        guard new != text else { return }
+        text = new
+        pending?.cancel()
+        // Очистка поля срабатывает сразу, без паузы.
+        if new.isEmpty { query = ""; return }
+        pending = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(180))
+            guard !Task.isCancelled else { return }
+            self?.query = new
+        }
+    }
+}
+
+/// Окна правки операции, счёта и бюджета. Читает состояние сам, поэтому открытие окна не перерисовывает список.
+private struct ActivitySheets: ViewModifier {
+    @Bindable var ui: ActivityUI
+    @Environment(\.modelContext) private var ctx
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(item: $ui.editingAccount) { AccountFormView(account: $0, nextSort: $0.sortID) }
+            .sheet(item: $ui.editingBudget) { NewBudgetView(budget: $0) }
+            .sheet(item: $ui.editing) { t in AddTransactionView(editing: t, partner: partner(of: t)) }
+    }
+
+    /// Вторая половинка перевода.
+    private func partner(of t: LedgerTransaction) -> LedgerTransaction? {
+        guard let id = t.transferID else { return nil }
+        let found = try? ctx.fetch(FetchDescriptor<LedgerTransaction>(predicate: #Predicate { $0.transferID == id }))
+        return found?.first { $0 !== t }
+    }
+}
+
+/// Дата дня и итог за день в основной валюте. Переводы между своими счетами в сумме взаимно гасятся.
+/// Отдельный экранный элемент, чтобы итог считался только для дней, которые сейчас на экране.
+private struct DayHeader: View {
+    let day: Date
+    let items: [LedgerTransaction]
+    @Environment(RatesStore.self) private var rates
+
+    var body: some View {
+        let total = items.reduce(Decimal(0)) { $0 + (rates.value(of: $1, in: rates.base) ?? 0) }
+        HStack {
+            Text(day.formatted(date: .complete, time: .omitted))
+            Spacer()
+            if total != 0 {
+                MoneyText(amount: total, code: rates.base, colored: true, signed: true, weight: .semibold)
+            }
+        }
     }
 }

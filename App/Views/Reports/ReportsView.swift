@@ -14,11 +14,40 @@ struct ReportsView: View {
 
     private var period: ReportPeriod { ReportPeriod(rawValue: periodRaw) ?? .quarter }
 
-    var body: some View {
-        let data = ReportBuilder.build(period: period, transactions: transactions, categories: categories, rates: rates)
+    @Environment(\.tabActive) private var active
+    /// Вкладку только что открыли: первые мгновения показываем прошлый расчёт, чтобы перелёт экрана его не ждал.
+    @State private var fresh = false
+    @State private var cache = ReportCache()
+
+    /// Готовый расчёт отчётов. Пока вкладка скрыта, он не обновляется: иначе каждая новая операция
+    /// на другом экране заново перебирала бы всю историю ради отчётов, которых никто не видит.
+    private struct Snapshot {
+        let period: ReportPeriod
+        let data: ReportData
+        let nw: NetWorthSeries
+        let forecast: [ForecastPoint]
+        let noData: Bool
+        /// Категорию могли удалить, пока вкладка была скрыта: такой расчёт показывать нельзя.
+        var valid: Bool { data.categories.values.allSatisfy { !$0.isDeleted && $0.modelContext != nil } }
+    }
+    private final class ReportCache { var value: Snapshot? }
+
+    private func snapshot() -> Snapshot {
+        if !(active && fresh), let c = cache.value, c.period == period, c.data.base == rates.base, c.valid { return c }
+        let data = perf("reports") { ReportBuilder.build(period: period, transactions: transactions, categories: categories, rates: rates) }
         // Для капитала нужна история подлиннее, чем один месяц.
         let nwRange = period.range(now: .now, earliest: transactions.map(\.date).min(), minMonths: 6)
-        let nw = NetWorthSeries.make(range: nwRange, transactions: transactions, rates: rates)
+        let nw = perf("netWorth") { NetWorthSeries.make(range: nwRange, transactions: transactions, rates: rates) }
+        let forecast = ReportBuilder.forecast(accounts: accounts, recurring: recurring, flows: data.flows, rates: rates, weeks: 13)
+        let s = Snapshot(period: period, data: data, nw: nw, forecast: forecast, noData: transactions.isEmpty)
+        cache.value = s
+        return s
+    }
+
+    var body: some View {
+        let snap = snapshot()
+        let data = snap.data
+        let nw = snap.nw
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
@@ -26,14 +55,14 @@ struct ReportsView: View {
                         ForEach(ReportPeriod.allCases) { Text($0.short).tag($0.rawValue) }
                     }.pickerStyle(.segmented)
 
-                    if data.flows.isEmpty && transactions.isEmpty {
+                    if data.flows.isEmpty && snap.noData {
                         ContentUnavailableView("rep.empty", systemImage: "chart.xyaxis.line", description: Text("rep.emptyHint")).padding(.top, 40)
                     } else {
                         insights(data)
                         link(NetWorthReport(series: nw, base: data.base)) { netWorthCard(nw, data.base) }
                         link(IncomeExpenseReport(data: data)) { incomeExpenseCard(data) }
                         link(BreakdownReport(data: data, sign: -1)) { spendingCard(data) }
-                        link(ForecastReport(base: data.base, flows: data.flows)) { forecastCard(data) }
+                        link(ForecastReport(base: data.base, flows: data.flows)) { forecastCard(data, snap.forecast) }
                         moreReports(data)
                     }
                 }.padding(.horizontal, 16).padding(.bottom, 100)
@@ -41,6 +70,11 @@ struct ReportsView: View {
             .buttonStyle(.plain)
             .themedScreen()
             .navigationTitle("tab.reports")
+        }
+        .task(id: active) {
+            guard active else { fresh = false; return }
+            try? await Task.sleep(for: .milliseconds(400))
+            if !Task.isCancelled { fresh = true }
         }
     }
 
@@ -186,8 +220,7 @@ struct ReportsView: View {
         }
     }
 
-    private func forecastCard(_ d: ReportData) -> some View {
-        let pts = ReportBuilder.forecast(accounts: accounts, recurring: recurring, flows: d.flows, rates: rates, weeks: 13)
+    private func forecastCard(_ d: ReportData, _ pts: [ForecastPoint]) -> some View {
         let low = Reports.lowPoint(pts, habit: true)
         return ReportCard {
             header("rep.fc.title", "sparkles")

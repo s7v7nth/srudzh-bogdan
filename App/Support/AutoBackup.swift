@@ -121,18 +121,22 @@ import LedgerCore
 
     /// Открывает доступ к папке копий на время `body`.
     private func withFolder<T>(_ body: (URL) throws -> T) throws -> T {
-        guard let data = ud.data(forKey: Keys.bookmark) else { throw CocoaError(.fileNoSuchFile) }
+        let r = try Self.inFolder(bookmark: ud.data(forKey: Keys.bookmark), sub: ud.string(forKey: Keys.sub) ?? "", body)
+        if let fresh = r.fresh { ud.set(fresh, forKey: Keys.bookmark) }
+        return r.value
+    }
+
+    /// То же без обращения к настройкам, чтобы работать и в фоне. `fresh` это обновлённая закладка, если старая устарела.
+    private nonisolated static func inFolder<T>(bookmark: Data?, sub: String, _ body: (URL) throws -> T) throws -> (value: T, fresh: Data?) {
+        guard let data = bookmark else { throw CocoaError(.fileNoSuchFile) }
         var stale = false
         let root = try URL(resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &stale)
         let scoped = root.startAccessingSecurityScopedResource()
         defer { if scoped { root.stopAccessingSecurityScopedResource() } }
-        if stale, let fresh = try? root.bookmarkData(options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil) {
-            ud.set(fresh, forKey: Keys.bookmark)
-        }
-        let sub = ud.string(forKey: Keys.sub) ?? ""
+        let fresh = stale ? try? root.bookmarkData(options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil) : nil
         let folder = sub.isEmpty ? root : root.appendingPathComponent(sub, isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        return try body(folder)
+        return (try body(folder), fresh)
     }
 
     // MARK: Запись
@@ -148,14 +152,22 @@ import LedgerCore
         dirty = false
         let name = BackupFiles.name(date: snapshot.created, transactions: snapshot.transactions.count)
         do {
-            let data = try snapshot.encoded()
-            try withFolder { folder in
-                try Self.coordinatedWrite(data, to: folder.appendingPathComponent(name))
-                Self.prune(folder)
-            }
+            // Упаковка и запись в iCloud Drive идут в фоне: на главном потоке они подвешивали экран
+            // через три секунды после каждой правки.
+            let bookmark = ud.data(forKey: Keys.bookmark), sub = ud.string(forKey: Keys.sub) ?? ""
+            let fresh = try await Task.detached(priority: .utility) {
+                let data = try snapshot.encoded()
+                return try Self.inFolder(bookmark: bookmark, sub: sub) { folder in
+                    try Self.coordinatedWrite(data, to: folder.appendingPathComponent(name))
+                    Self.prune(folder)
+                }.fresh
+            }.value
+            if let fresh { ud.set(fresh, forKey: Keys.bookmark) }
             lastSuccess = snapshot.created
             ud.set(snapshot.created, forKey: Keys.last)
             failed = false
+            // Пока файл писался, данные могли измениться ещё раз: эта правка попадёт в следующую копию.
+            if dirty { schedule() }
             return true
         } catch {
             dirty = true
@@ -218,6 +230,8 @@ import LedgerCore
         guard let ctx = context else { return }
         let snapshot = try load(entry)
         pending?.cancel()
+        // Дожидаемся копии, которая пишется прямо сейчас: иначе страховочная копия перед заменой не создастся.
+        while isWorking { try? await Task.sleep(for: .milliseconds(100)) }
         dirty = true
         guard await backupNow() || !hasFolder else { throw CocoaError(.fileWriteUnknown) }
         try snapshot.restore(into: ctx, rates: rates)

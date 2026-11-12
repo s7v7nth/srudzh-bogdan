@@ -93,3 +93,19 @@ struct AmountField: View {
 extension Date {
     var shortDay: String { formatted(date: .abbreviated, time: .omitted) }
 }
+
+/// Замер тяжёлых расчётов. В отладочной сборке с аргументом -perfLog печатает в консоль, сколько занял расчёт.
+@MainActor func perf<T>(_ name: String, _ work: () -> T) -> T {
+    #if DEBUG
+    guard perfLogEnabled else { return work() }
+    let start = CFAbsoluteTimeGetCurrent()
+    let result = work()
+    print("perf \(name): \(Int((CFAbsoluteTimeGetCurrent() - start) * 1000)) ms")
+    return result
+    #else
+    return work()
+    #endif
+}
+#if DEBUG
+private let perfLogEnabled = CommandLine.arguments.contains("-perfLog")
+#endif

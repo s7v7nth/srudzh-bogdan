@@ -7,6 +7,8 @@ struct AccountsView: View {
     @Environment(RatesStore.self) private var rates
     @Query(sort: \Account.sortID) private var accounts: [Account]
     @State private var showNew = false
+    /// Остатки из общего расчёта: экран не перебирает операции сам.
+    private var stats: LedgerStats { StatsStore.shared.value }
     @State private var showSettings = false
     @State private var showWallet = false
     @State private var includePending = true
@@ -20,7 +22,7 @@ struct AccountsView: View {
         var total: Decimal = 0
         var missing = Set<String>()
         for a in accounts where showAll || a.isPrimary {
-            let b = balance(of: a, includePending: includePending)
+            let b = stats.balance(a, includePending: includePending)
             if let v = rates.convert(b, from: a.currency, to: rates.base) { total += v } else { missing.insert(a.currency) }
         }
         return (total, missing)
@@ -28,7 +30,7 @@ struct AccountsView: View {
 
     private var byCurrency: [(code: String, sum: Decimal)] {
         Dictionary(grouping: accounts.filter { showAll || $0.isPrimary }, by: \.currency)
-            .map { ($0.key, $0.value.reduce(Decimal(0)) { $0 + balance(of: $1, includePending: includePending) }) }
+            .map { ($0.key, $0.value.reduce(Decimal(0)) { $0 + stats.balance($1, includePending: includePending) }) }
             .sorted { $0.0 < $1.0 }
     }
 
@@ -111,7 +113,7 @@ struct AccountsView: View {
             .sorted { ($0.debtDue ?? .distantFuture) < ($1.debtDue ?? .distantFuture) }
     }
     private var closedDebts: [Account] { accounts.filter { $0.isDebt && isClosed($0) } }
-    private func isClosed(_ a: Account) -> Bool { !a.transactions.isEmpty && balance(of: a) == 0 }
+    private func isClosed(_ a: Account) -> Bool { !a.transactions.isEmpty && stats.balance(a) == 0 }
 
     @ViewBuilder private func accountLink(_ a: Account) -> some View {
         NavigationLink {
@@ -126,7 +128,7 @@ struct AccountsView: View {
     }
 
     @ViewBuilder private func row(_ a: Account) -> some View {
-        let b = balance(of: a, includePending: includePending)
+        let b = stats.balance(a, includePending: includePending)
         HStack(spacing: 12) {
             let usage: Double = a.isCredit && (a.creditLimit ?? 0) > 0
                 ? NSDecimalNumber(decimal: max(-b, 0) / (a.creditLimit ?? 1)).doubleValue : 0

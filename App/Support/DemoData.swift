@@ -79,6 +79,16 @@ enum DemoData {
                        startDate: cal.dateInterval(of: .month, for: .now)!.start)
         if let c = cat("cart") { b.categories = [c] }
         ctx.insert(b)
+        // -seedBulk N: ещё N случайных трат за два года, чтобы проверить скорость на большой базе.
+        if let i = CommandLine.arguments.firstIndex(of: "-seedBulk"), i + 1 < CommandLine.arguments.count,
+           let n = Int(CommandLine.arguments[i + 1]) {
+            let spend = cats.filter { !$0.isIncome }
+            for k in 0..<n {
+                add(-Decimal(Int.random(in: 1...90)), .expense, k % 3 == 0 ? usd : byn, day: Int.random(in: 0...730),
+                    payee: "Shop \(k % 40)", category: spend.randomElement())
+            }
+            add(Decimal(n * 60), .income, byn, day: 731, payee: "Opening balance")
+        }
         try? ctx.save()
 
         // -seedSMS: три настоящих СМС Приорбанка; -seedSMSAlias: карта 8780 уже привязана к «BYN card».

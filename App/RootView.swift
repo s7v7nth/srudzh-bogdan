@@ -32,13 +32,14 @@ struct RootView: View {
             MainTab(id: 4, title: "tab.reports", icon: "chart.xyaxis.line"),
         ]) { i in
             switch i {
-            case 0: if chaos { ChaosHomeView() } else { AccountsView() }
+            case 0: HomeTab()
             case 1: ActivityView()
             case 2: BudgetsView()
             case 3: ScheduledView()
             default: ReportsView()
             }
         }
+        .background(StatsHost())
         .overlay {
             if fanOpen {
                 Color.black.opacity(0.25).ignoresSafeArea()
@@ -92,5 +93,14 @@ struct RootView: View {
             .accessibilityLabel(Text("add.title"))
         }
         .padding(.trailing, 20).padding(.bottom, 80)
+    }
+}
+
+/// Первая вкладка: кружки или обычный список счетов. Настройку читает сама,
+/// потому что экраны вкладок не перерисовываются вместе с нижней панелью.
+private struct HomeTab: View {
+    @AppStorage(chaosModeKey) private var chaos = false
+    var body: some View {
+        if chaos { ChaosHomeView() } else { AccountsView() }
     }
 }

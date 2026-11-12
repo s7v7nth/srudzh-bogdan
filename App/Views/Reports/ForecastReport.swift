@@ -9,7 +9,7 @@ extension ReportBuilder {
                          rates: RatesStore, weeks: Int, now: Date = .now) -> [ForecastPoint] {
         let base = rates.base
         let start = accounts.filter { !$0.excludedFromNetWorth }
-            .reduce(Decimal(0)) { $0 + (rates.convert(balance(of: $1), from: $1.currency, to: base) ?? 0) }
+            .reduce(Decimal(0)) { $0 + (rates.convert(StatsStore.shared.value.balance($1), from: $1.currency, to: base) ?? 0) }
         let items: [ScheduledItem] = recurring.compactMap { r in
             guard r.active, r.type != .transfer, let acc = r.account,
                   let v = rates.convert(r.amount, from: acc.currency, to: base) else { return nil }
