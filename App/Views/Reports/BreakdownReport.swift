@@ -47,7 +47,7 @@ struct BreakdownReport: View {
                     ReportCard {
                         ForEach(Array(list.enumerated()), id: \.element.key) { i, s in
                             HStack(spacing: 10) {
-                                if dim == .category { CategoryBadge(category: data.categories[s.key], size: 32) }
+                                if dim == .category { CategoryBadge(info: data.categories[s.key], size: 32) }
                                 else { Circle().fill(color(i, s)).frame(width: 12, height: 12).padding(.horizontal, 10) }
                                 VStack(alignment: .leading, spacing: 4) {
                                     HStack {

@@ -54,7 +54,7 @@ struct CompareReport: View {
         ReportCard(title: title) {
             ForEach(list, id: \.key) { c in
                 HStack(spacing: 10) {
-                    CategoryBadge(category: data.categories[c.key], size: 32)
+                    CategoryBadge(info: data.categories[c.key], size: 32)
                     VStack(alignment: .leading, spacing: 3) {
                         HStack {
                             Text(data.catName(c.key)).font(.app(.body, .medium)).lineLimit(1)

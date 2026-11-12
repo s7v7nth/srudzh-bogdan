@@ -155,6 +155,7 @@ struct CardDetailView: View {
                     Button("common.edit", systemImage: "pencil") { editing = true }
                     Button("wallet.delete", systemImage: "trash", role: .destructive) { confirmDelete = true }
                 } label: { Image(systemName: "ellipsis.circle") }
+                .accessibilityLabel(Text("common.more"))
             }
         }
         .sheet(isPresented: $editing) { CardFormView(card: card) }

@@ -4,7 +4,7 @@ import Charts
 import LedgerCore
 
 /// Капитал по месяцам: активы (плюс) и долги (минус) в основной валюте.
-struct NetWorthSeries {
+struct NetWorthSeries: Sendable {
     let dates: [Date]
     let assets: [Decimal]
     let debts: [Decimal]
@@ -17,7 +17,7 @@ struct NetWorthSeries {
     }
 
     /// Точки: начало периода и конец каждого месяца (последняя точка это «сейчас»).
-    @MainActor static func make(range: DateInterval, transactions: [LedgerTransaction], rates: RatesStore, now: Date = .now) -> NetWorthSeries {
+    static func make(range: DateInterval, transactions: [LedgerTransaction], rates: RateSnapshot, now: Date = .now) -> NetWorthSeries {
         let cal = Calendar.current
         var pts: [Date] = [range.start.addingTimeInterval(-1)]
         for m in Reports.months(from: range.start, to: range.end.addingTimeInterval(-1)) {

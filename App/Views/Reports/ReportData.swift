@@ -40,8 +40,16 @@ struct ReportRow {
     var catKey: String
 }
 
+/// Категория для отчётов: только то, что нужно показать. Объекты базы между потоками передавать нельзя,
+/// а отчёты считаются в фоне.
+struct ReportCategory: Sendable {
+    let name: String
+    let icon: String
+    let colorName: String
+}
+
 /// Всё, что нужно экранам отчётов: операции в основной валюте и справочники. Строится один раз на показ.
-struct ReportData {
+struct ReportData: @unchecked Sendable {
     let base: String
     let period: ReportPeriod
     let range: DateInterval
@@ -50,7 +58,7 @@ struct ReportData {
     let flows: [ReportTx]
     let current: [ReportTx]
     let previous: [ReportTx]
-    let categories: [String: Category]      // по uuid верхней категории
+    let categories: [String: ReportCategory]      // по uuid категории
     let uncategorized: String
     let noPayee: String
 
@@ -85,7 +93,7 @@ struct ReportData {
 }
 
 /// Сборка данных отчётов из базы.
-@MainActor enum ReportBuilder {
+enum ReportBuilder {
     /// Названия начального остатка на всех языках приложения: запись могли создать до смены языка.
     static func openingPayees() -> Set<String> {
         var out: Set<String> = ["Opening balance"]
@@ -97,7 +105,7 @@ struct ReportData {
         return out
     }
 
-    static func build(period: ReportPeriod, transactions: [LedgerTransaction], categories: [Category], rates: RatesStore,
+    static func build(period: ReportPeriod, transactions: [LedgerTransaction], categories: [Category], rates: RateSnapshot,
                       minMonths: Int = 1, now: Date = .now) -> ReportData {
         let base = rates.base
         let opening = openingPayees()
@@ -123,13 +131,14 @@ struct ReportData {
         return ReportData(base: base, period: period, range: range, previousRange: prevRange, flows: flows,
                           current: Reports.filter(flows, in: range),
                           previous: prevRange.map { Reports.filter(flows, in: $0) } ?? [],
-                          categories: byID, uncategorized: String(localized: "rep.uncategorized"),
+                          categories: byID.mapValues { ReportCategory(name: $0.name, icon: $0.icon, colorName: $0.colorName) },
+                          uncategorized: String(localized: "rep.uncategorized"),
                           noPayee: String(localized: "rep.noPayee"))
     }
 
     /// Активы и долги на каждую дату. Прошлые точки считаются по курсам операций, а последняя (сегодня)
     /// по текущим курсам, чтобы совпадать с «Всего» на экране счетов.
-    static func accountSeries(transactions: [LedgerTransaction], rates: RatesStore, at points: [Date]) -> (assets: [Decimal], debts: [Decimal]) {
+    static func accountSeries(transactions: [LedgerTransaction], rates: RateSnapshot, at points: [Date]) -> (assets: [Decimal], debts: [Decimal]) {
         let base = rates.base
         var byAccount: [PersistentIdentifier: (code: String, base: [(date: Date, amount: Decimal)], native: [(date: Date, amount: Decimal)])] = [:]
         for t in transactions {

@@ -46,6 +46,7 @@
 		8BDA2B76D4E2FA14103B3E5B /* LedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = 76AD14E3CB339D9439FB1985 /* LedgerCore */; };
 		949597662E974215927E150D /* ChaosHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0448F648CE708CDBDE04E747 /* ChaosHomeView.swift */; };
 		95EEF80D56DDD1069ED346EC /* LedgerStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ADA3D32EAFC502BD045B468 /* LedgerStats.swift */; };
+		99275EF35509EEB083C87A5F /* SaveGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8CEDBE490A807EC66A9C328 /* SaveGuard.swift */; };
 		9A011AA9919F6D4E7F129822 /* RatesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08C156CADCD98F8D04E0926A /* RatesStore.swift */; };
 		9AE90A9EEDC94EA6A9B5E0D5 /* Scheduling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40560DB3DF4FDD56533053CE /* Scheduling.swift */; };
 		A12C588C0EFB5D9FA1C67304 /* OnbSummaryStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 631052F70952E945E12A9A2E /* OnbSummaryStep.swift */; };
@@ -122,6 +123,7 @@
 		945B4964B058A1FC2B096C57 /* BackupSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupSnapshot.swift; sourceTree = "<group>"; };
 		A3960D8506A9E562BEB020BD /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
 		A5C64F8CBED0086A24464581 /* LoanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanView.swift; sourceTree = "<group>"; };
+		A8CEDBE490A807EC66A9C328 /* SaveGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveGuard.swift; sourceTree = "<group>"; };
 		AABD1059774D7CEEAA0AC074 /* EveningNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningNotifier.swift; sourceTree = "<group>"; };
 		AC1A130331EC13BDF9D08A24 /* OnboardingComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingComponents.swift; sourceTree = "<group>"; };
 		B008CDE08E8F0EF95A3F1BA4 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -237,6 +239,7 @@
 				B008CDE08E8F0EF95A3F1BA4 /* Models.swift */,
 				D94FC50C79D6050C70AD264B /* MoneyText.swift */,
 				08C156CADCD98F8D04E0926A /* RatesStore.swift */,
+				A8CEDBE490A807EC66A9C328 /* SaveGuard.swift */,
 				40560DB3DF4FDD56533053CE /* Scheduling.swift */,
 				D9058CC94FE0D09A4F16C987 /* SMSImporter.swift */,
 				DF08D6888758E47909331231 /* SMSIntent.swift */,
@@ -443,6 +446,7 @@
 				770CE0C504CC625644E896C5 /* SMSImporter.swift in Sources */,
 				29DC5D876EBB288D2ABEE181 /* SMSIntent.swift in Sources */,
 				D973460B9D31016F317DA6F5 /* SMSViews.swift in Sources */,
+				99275EF35509EEB083C87A5F /* SaveGuard.swift in Sources */,
 				E28ADEE916513BEC79BED43B /* ScheduledView.swift in Sources */,
 				9AE90A9EEDC94EA6A9B5E0D5 /* Scheduling.swift in Sources */,
 				0A6EDF96A8BD4F47CDF2E89B /* SettingsViews.swift in Sources */,

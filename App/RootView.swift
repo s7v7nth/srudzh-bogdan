@@ -56,12 +56,15 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardUp = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardUp = false }
         .sheet(item: $addType) { AddTransactionView(type: $0) }
+        .alert("save.failed.title", isPresented: Bindable(SaveGuard.shared).showError) {
+            Button("common.ok") {}
+        } message: { Text("save.failed.message") }
         .sheet(isPresented: $showReview) { SMSReviewView() }
         .sheet(isPresented: $askBackup, onDismiss: { AutoBackup.shared.asked = true }) { BackupPromptSheet() }
         .onAppear(perform: openReviewIfNeeded)
         .onChange(of: phase) {
             if phase == .active { openReviewIfNeeded(); EveningNotifier.shared.reschedule() }
-            if phase == .background { AutoBackup.shared.flush() }
+            if phase == .background { SaveGuard.shared.saveNow(); AutoBackup.shared.flush() }
         }
         .fullScreenCover(isPresented: Binding(get: { needsOnboarding }, set: { _ in })) {
             OnboardingFlow(initialCurrency: rates.base.isEmpty ? Currencies.deviceDefault : rates.base) { onboardingDone = true }

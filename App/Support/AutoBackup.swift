@@ -144,11 +144,17 @@ import LedgerCore
     /// Пишет копию сейчас. Пустую базу (до онбординга) не сохраняем, чтобы не плодить пустые файлы.
     @discardableResult func backupNow() async -> Bool {
         guard let ctx = context, hasFolder, !isWorking else { return false }
-        let snapshot: BackupSnapshot
-        do { snapshot = try BackupSnapshot.make(ctx: ctx, base: baseCurrency()) } catch { failed = true; return false }
-        guard !snapshot.accounts.isEmpty || !snapshot.transactions.isEmpty else { dirty = false; return true }
         isWorking = true
         defer { isWorking = false }
+        // Копия собирается из того, что уже на диске, поэтому сначала дописываем свежие правки.
+        SaveGuard.shared.saveNow()
+        let settings = BackupSnapshot.currentSettings(base: baseCurrency())
+        let container = ctx.container
+        let snapshot: BackupSnapshot
+        // Сборка копии перебирает всю базу: делаем это в фоне, чтобы экран не замирал.
+        do { snapshot = try await Task.detached(priority: .utility) { try BackupSnapshot.make(ctx: ModelContext(container), settings: settings) }.value }
+        catch { failed = true; return false }
+        guard !snapshot.accounts.isEmpty || !snapshot.transactions.isEmpty else { dirty = false; return true }
         dirty = false
         let name = BackupFiles.name(date: snapshot.created, transactions: snapshot.transactions.count)
         do {

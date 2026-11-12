@@ -196,6 +196,8 @@ struct AddTransactionView: View {
         let write = pendingWrite
         pendingWrite = nil
         write?.run()
+        // Сразу на диск: общие цифры и автокопия обновляются после сохранения.
+        SaveGuard.shared.saveNow()
     }
 
     /// Правит операцию на месте; у перевода обновляются обе половинки.

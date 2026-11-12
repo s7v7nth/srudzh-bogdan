@@ -136,7 +136,7 @@ struct TxTypeBadge: View {
 }
 
 /// Сколько потрачено и каков лимит по бюджету в текущем периоде.
-struct BudgetProgress: Equatable {
+struct BudgetProgress: Equatable, Sendable {
     let spent: Decimal
     let limit: Decimal
     let remaining: Decimal
@@ -146,6 +146,10 @@ struct BudgetProgress: Equatable {
     var state: BudgetState { BudgetState(ratio: ratio) }
 
     @MainActor static func make(_ b: Budget, transactions: [LedgerTransaction], rates: RatesStore) -> BudgetProgress? {
+        make(b, transactions: transactions, rates: rates.snapshot)
+    }
+
+    static func make(_ b: Budget, transactions: [LedgerTransaction], rates: RateSnapshot) -> BudgetProgress? {
         let cur = b.currency.isEmpty ? rates.base : b.currency
         guard let p = Budgets.period(start: b.startDate, type: b.repeatType, duration: 1, containing: .now) else { return nil }
         let monitored: Set<UUID>? = b.categories.isEmpty ? nil : Set(b.categories.flatMap { $0.familyIDs })

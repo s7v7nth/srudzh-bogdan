@@ -12,7 +12,8 @@ import SwiftData
         #if DEBUG
         DemoData.runIfRequested(c.mainContext, rates: rates)
         #endif
-        StatsStore.shared.prime(c.mainContext, rates: rates)
+        SaveGuard.shared.start(c.mainContext)
+        StatsStore.shared.start(container: c, rates: rates.snapshot)
         AutoBackup.shared.start(container: c, rates: rates)
         EveningNotifier.shared.start(container: c, rates: rates)
         #if DEBUG

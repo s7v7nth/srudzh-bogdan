@@ -5,7 +5,7 @@ import LedgerCore
 
 extension ReportBuilder {
     /// Прогноз остатка: стартуем с капитала сегодня, добавляем платежи по расписанию и привычный темп.
-    static func forecast(accounts: [Account], recurring: [RecurringTransaction], flows: [ReportTx],
+    @MainActor static func forecast(accounts: [Account], recurring: [RecurringTransaction], flows: [ReportTx],
                          rates: RatesStore, weeks: Int, now: Date = .now) -> [ForecastPoint] {
         let base = rates.base
         let start = accounts.filter { !$0.excludedFromNetWorth }

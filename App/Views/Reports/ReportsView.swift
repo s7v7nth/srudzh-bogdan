@@ -6,8 +6,7 @@ import LedgerCore
 /// Вкладка «Отчёты»: выбор периода, короткие выводы и карточки отчётов с мини-превью.
 struct ReportsView: View {
     @Environment(RatesStore.self) private var rates
-    @Query private var transactions: [LedgerTransaction]
-    @Query private var categories: [Category]
+    @Environment(\.modelContext) private var ctx
     @Query private var accounts: [Account]
     @Query(filter: #Predicate<RecurringTransaction> { $0.active }) private var recurring: [RecurringTransaction]
     @AppStorage("reportsPeriod") private var periodRaw = ReportPeriod.quarter.rawValue
@@ -15,67 +14,73 @@ struct ReportsView: View {
     private var period: ReportPeriod { ReportPeriod(rawValue: periodRaw) ?? .quarter }
 
     @Environment(\.tabActive) private var active
-    /// Вкладку только что открыли: первые мгновения показываем прошлый расчёт, чтобы перелёт экрана его не ждал.
-    @State private var fresh = false
-    @State private var cache = ReportCache()
+    @State private var snap: Snapshot?
 
-    /// Готовый расчёт отчётов. Пока вкладка скрыта, он не обновляется: иначе каждая новая операция
-    /// на другом экране заново перебирала бы всю историю ради отчётов, которых никто не видит.
-    private struct Snapshot {
-        let period: ReportPeriod
+    /// Готовый расчёт отчётов. Считается в фоне, поэтому экран не замирает, пока перебирается вся история.
+    private struct Snapshot: Sendable {
         let data: ReportData
         let nw: NetWorthSeries
-        let forecast: [ForecastPoint]
         let noData: Bool
-        /// Категорию могли удалить, пока вкладка была скрыта: такой расчёт показывать нельзя.
-        var valid: Bool { data.categories.values.allSatisfy { !$0.isDeleted && $0.modelContext != nil } }
     }
-    private final class ReportCache { var value: Snapshot? }
 
-    private func snapshot() -> Snapshot {
-        if !(active && fresh), let c = cache.value, c.period == period, c.data.base == rates.base, c.valid { return c }
+    /// Когда пересчитывать: вкладка на виду, сменился период или курсы, сохранились правки в базе.
+    /// Пока вкладка скрыта, отчёты не считаются вовсе: их никто не видит.
+    private struct Trigger: Equatable {
+        let active: Bool
+        let period: ReportPeriod
+        let rates: RateSnapshot
+        let version: Int
+    }
+
+    nonisolated private static func compute(period: ReportPeriod, rates: RateSnapshot, container: ModelContainer) -> Snapshot {
+        let ctx = ModelContext(container)
+        let transactions = (try? ctx.fetch(FetchDescriptor<LedgerTransaction>())) ?? []
+        let categories = (try? ctx.fetch(FetchDescriptor<Category>())) ?? []
         let data = perf("reports") { ReportBuilder.build(period: period, transactions: transactions, categories: categories, rates: rates) }
         // Для капитала нужна история подлиннее, чем один месяц.
         let nwRange = period.range(now: .now, earliest: transactions.map(\.date).min(), minMonths: 6)
         let nw = perf("netWorth") { NetWorthSeries.make(range: nwRange, transactions: transactions, rates: rates) }
-        let forecast = ReportBuilder.forecast(accounts: accounts, recurring: recurring, flows: data.flows, rates: rates, weeks: 13)
-        let s = Snapshot(period: period, data: data, nw: nw, forecast: forecast, noData: transactions.isEmpty)
-        cache.value = s
-        return s
+        return Snapshot(data: data, nw: nw, noData: transactions.isEmpty)
     }
 
     var body: some View {
-        let snap = snapshot()
-        let data = snap.data
-        let nw = snap.nw
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 14) {
-                    Picker("rep.period", selection: $periodRaw) {
-                        ForEach(ReportPeriod.allCases) { Text($0.short).tag($0.rawValue) }
-                    }.pickerStyle(.segmented)
-
-                    if data.flows.isEmpty && snap.noData {
-                        ContentUnavailableView("rep.empty", systemImage: "chart.xyaxis.line", description: Text("rep.emptyHint")).padding(.top, 40)
-                    } else {
-                        insights(data)
-                        link(NetWorthReport(series: nw, base: data.base)) { netWorthCard(nw, data.base) }
-                        link(IncomeExpenseReport(data: data)) { incomeExpenseCard(data) }
-                        link(BreakdownReport(data: data, sign: -1)) { spendingCard(data) }
-                        link(ForecastReport(base: data.base, flows: data.flows)) { forecastCard(data, snap.forecast) }
-                        moreReports(data)
-                    }
-                }.padding(.horizontal, 16).padding(.bottom, 100)
+            Group {
+                if let snap { content(snap) } else { ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity) }
             }
-            .buttonStyle(.plain)
             .themedScreen()
             .navigationTitle("tab.reports")
         }
-        .task(id: active) {
-            guard active else { fresh = false; return }
-            try? await Task.sleep(for: .milliseconds(400))
-            if !Task.isCancelled { fresh = true }
+        .task(id: Trigger(active: active, period: period, rates: rates.snapshot, version: StatsStore.shared.version)) {
+            guard active else { return }
+            let period = period, rates = rates.snapshot, container = ctx.container
+            let s = await Task.detached(priority: .userInitiated) { Self.compute(period: period, rates: rates, container: container) }.value
+            if !Task.isCancelled { snap = s }
         }
+    }
+
+    private func content(_ snap: Snapshot) -> some View {
+        let data = snap.data
+        let nw = snap.nw
+        return ScrollView {
+            VStack(spacing: 14) {
+                Picker("rep.period", selection: $periodRaw) {
+                    ForEach(ReportPeriod.allCases) { Text($0.short).tag($0.rawValue) }
+                }.pickerStyle(.segmented)
+
+                if data.flows.isEmpty && snap.noData {
+                    ContentUnavailableView("rep.empty", systemImage: "chart.xyaxis.line", description: Text("rep.emptyHint")).padding(.top, 40)
+                } else {
+                    insights(data)
+                    link(NetWorthReport(series: nw, base: data.base)) { netWorthCard(nw, data.base) }
+                    link(IncomeExpenseReport(data: data)) { incomeExpenseCard(data) }
+                    link(BreakdownReport(data: data, sign: -1)) { spendingCard(data) }
+                    link(ForecastReport(base: data.base, flows: data.flows)) { forecastCard(data) }
+                    moreReports(data)
+                }
+            }.padding(.horizontal, 16).padding(.bottom, 100)
+        }
+        .buttonStyle(.plain)
     }
 
     private func link<D: View, L: View>(_ dest: D, @ViewBuilder label: () -> L) -> some View {
@@ -220,7 +225,8 @@ struct ReportsView: View {
         }
     }
 
-    private func forecastCard(_ d: ReportData, _ pts: [ForecastPoint]) -> some View {
+    private func forecastCard(_ d: ReportData) -> some View {
+        let pts = ReportBuilder.forecast(accounts: accounts, recurring: recurring, flows: d.flows, rates: rates, weeks: 13)
         let low = Reports.lowPoint(pts, habit: true)
         return ReportCard {
             header("rep.fc.title", "sparkles")

@@ -62,13 +62,14 @@ struct ScheduledView: View {
             MoneyText(amount: r.amount, code: r.account?.currency ?? rates.base, colored: true)
         }
         .opacity(r.active ? 1 : 0.5)
-        .swipeActions(edge: .leading) {
+        // Полный свайп отключён: случайный жест не должен провести или удалить платёж.
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
             if r.active {
                 Button("sched.execute", systemImage: "checkmark") { execute(r) }.tint(BudgetState.ok.tint)
                 Button("sched.skip", systemImage: "forward") { advance(r, from: r.nextDate) }.tint(BudgetState.warn.tint)
             }
         }
-        .swipeActions(edge: .trailing) {
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button("common.delete", role: .destructive) { ctx.delete(r); Haptics.delete() }.tint(.red)
             Button("sched.amount") { editing = r }.tint(.blue)
             if r.type == .expense { Button("loan.convert") { converting = r }.tint(.orange) }

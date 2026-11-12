@@ -2,9 +2,6 @@ import SwiftUI
 import SwiftData
 
 struct ActivityView: View {
-    @Environment(\.modelContext) private var ctx
-    @Environment(RatesStore.self) private var rates
-    @Query(sort: \LedgerTransaction.date, order: .reverse) private var all: [LedgerTransaction]
     var account: Account? = nil
     /// Если задан, показываются только операции из категорий бюджета (как он их считает).
     var budget: Budget? = nil
@@ -12,7 +9,52 @@ struct ActivityView: View {
     /// не заставляют заново перебирать все операции. Список перестраивается, когда меняется `query`.
     @State private var ui = ActivityUI()
     @State private var typeFilter: TxType?
-    private var search: String { ui.query }
+    /// Сколько последних операций показывать в общем списке без поиска и фильтра.
+    @State private var limit = ActivityList.page
+
+    var body: some View {
+        // Общий список без поиска и фильтра берёт из базы только последние операции: он открыт всё время,
+        // и после каждой правки перечитывать всю историю ради него слишком дорого.
+        let limited = account == nil && budget == nil && ui.query.isEmpty && typeFilter == nil
+        let content = ActivityList(account: account, budget: budget, search: ui.query, typeFilter: $typeFilter, ui: ui,
+                                   limit: limited ? limit : nil) { limit += ActivityList.page }
+            // Поле поиска всегда сверху под заголовком: на iOS 26 системное место внизу закрыто нашей панелью вкладок.
+            .searchable(text: Binding(get: { ui.text }, set: { ui.type($0) }), placement: .navigationBarDrawer(displayMode: .always), prompt: Text("activity.search"))
+            .themedScreen()
+            .navigationTitle(budget?.name ?? account?.name ?? String(localized: "tab.activity"))
+            .toolbar {
+                if let account { Button("common.edit") { ui.editingAccount = account } }
+                if let budget { Button("common.edit") { ui.editingBudget = budget } }
+            }
+            .modifier(ActivitySheets(ui: ui))
+
+        if account == nil && budget == nil { NavigationStack { content } } else { content }
+    }
+}
+
+/// Сам список операций. Запрос к базе строится по фильтрам экрана.
+private struct ActivityList: View {
+    static let page = 300
+
+    @Environment(\.modelContext) private var ctx
+    @Environment(RatesStore.self) private var rates
+    @Query private var all: [LedgerTransaction]
+    let account: Account?
+    let budget: Budget?
+    let search: String
+    @Binding var typeFilter: TxType?
+    let ui: ActivityUI
+    let limit: Int?
+    let onMore: () -> Void
+
+    init(account: Account?, budget: Budget?, search: String, typeFilter: Binding<TxType?>, ui: ActivityUI,
+         limit: Int?, onMore: @escaping () -> Void) {
+        var d = FetchDescriptor<LedgerTransaction>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+        if let limit { d.fetchLimit = limit }
+        _all = Query(d)
+        self.account = account; self.budget = budget; self.search = search
+        _typeFilter = typeFilter; self.ui = ui; self.limit = limit; self.onMore = onMore
+    }
 
     /// Один проход по всем операциям вместо трёх отдельных фильтров.
     private var filtered: [LedgerTransaction] {
@@ -39,7 +81,11 @@ struct ActivityView: View {
 
     var body: some View {
         let list = perf("activity") { filtered }
-        let content = List {
+        // Если упёрлись в предел, последний день мог попасть не целиком: его прячем, чтобы итог дня был честным.
+        let hasMore = limit.map { all.count >= $0 } ?? false
+        var groups = days(list)
+        if hasMore, groups.count > 1 { groups.removeLast() }
+        return List {
             Section {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
@@ -54,28 +100,24 @@ struct ActivityView: View {
             if list.isEmpty {
                 ContentUnavailableView("activity.empty", systemImage: "list.bullet", description: Text("activity.emptyHint"))
             }
-            ForEach(days(list), id: \.0) { day, items in
+            ForEach(groups, id: \.0) { day, items in
                 Section {
-                    ForEach(items) { t in Button { ui.editing = t } label: { row(t) }.buttonStyle(RowPress()).swipeActions { Button("common.delete") { remove(t) }.tint(.red) } }
+                    ForEach(items) { t in Button { ui.editing = t } label: { row(t) }.buttonStyle(RowPress())
+                        // Без полного свайпа: широкий жест не должен молча стирать операцию, кнопку жмут отдельно.
+                        .swipeActions(allowsFullSwipe: false) { Button("common.delete") { remove(t) }.tint(.red) } }
                 } header: {
                     DayHeader(day: day, items: items)
+                }
+            }
+            if hasMore {
+                Section {
+                    Button("activity.more", action: onMore).font(.app(.body, .semibold)).frame(maxWidth: .infinity)
                 }
             }
         }
         .contentMargins(.bottom, 90, for: .scrollContent)
         // Список сам плавно убирает удалённую строку (и пустой день целиком), а при поиске строки не разъезжаются.
         .animation(search.isEmpty ? Motion.standard : nil, value: list.map(\.persistentModelID))
-        // Поле поиска всегда сверху под заголовком: на iOS 26 системное место внизу закрыто нашей панелью вкладок.
-        .searchable(text: Binding(get: { ui.text }, set: { ui.type($0) }), placement: .navigationBarDrawer(displayMode: .always), prompt: Text("activity.search"))
-        .themedScreen()
-        .navigationTitle(budget?.name ?? account?.name ?? String(localized: "tab.activity"))
-        .toolbar {
-            if let account { Button("common.edit") { ui.editingAccount = account } }
-            if let budget { Button("common.edit") { ui.editingBudget = budget } }
-        }
-        .modifier(ActivitySheets(ui: ui))
-
-        if account == nil && budget == nil { NavigationStack { content } } else { content }
     }
 
     /// Та же логика, что у подсчёта бюджета: траты в его категориях (с подкатегориями) и платежи по кредиту
@@ -133,7 +175,7 @@ struct ActivityView: View {
     /// Кнопка удаления без системной роли «удалить»: с ней список убирает строку сам, а пустой день
     /// исчезает отдельным рывком позже. Так строка и день уходят одним плавным движением.
     private func remove(_ t: LedgerTransaction) {
-        if let id = t.transferID { all.filter { $0.transferID == id }.forEach(ctx.delete) } else { ctx.delete(t) }
+        if let id = t.transferID { LedgerTransaction.halves(of: id, in: ctx).forEach(ctx.delete) } else { ctx.delete(t) }
         Haptics.delete()
     }
 }
@@ -177,9 +219,7 @@ private struct ActivitySheets: ViewModifier {
 
     /// Вторая половинка перевода.
     private func partner(of t: LedgerTransaction) -> LedgerTransaction? {
-        guard let id = t.transferID else { return nil }
-        let found = try? ctx.fetch(FetchDescriptor<LedgerTransaction>(predicate: #Predicate { $0.transferID == id }))
-        return found?.first { $0 !== t }
+        t.transferID.flatMap { id in LedgerTransaction.halves(of: id, in: ctx).first { $0 !== t } }
     }
 }
 
@@ -206,5 +246,12 @@ private struct DayHeader: View {
                 MoneyText(amount: total, code: rates.base, colored: true, signed: true, weight: .semibold)
             }
         }
+    }
+}
+
+extension LedgerTransaction {
+    /// Обе половинки перевода с этим номером. Ищет в базе, а не в показанном списке: вторая половинка могла в него не попасть.
+    static func halves(of id: UUID, in ctx: ModelContext) -> [LedgerTransaction] {
+        (try? ctx.fetch(FetchDescriptor<LedgerTransaction>(predicate: #Predicate { $0.transferID == id }))) ?? []
     }
 }

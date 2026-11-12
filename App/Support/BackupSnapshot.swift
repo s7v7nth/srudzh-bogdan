@@ -118,15 +118,21 @@ extension BackupSnapshot {
 
     // MARK: Снимок
 
-    @MainActor static func make(ctx: ModelContext, base: String) throws -> BackupSnapshot {
+    /// Настройки приложения для копии. Читаются на главном потоке, остальное можно собирать в фоне.
+    @MainActor static func currentSettings(base: String) -> Settings {
         let ud = UserDefaults.standard
-        var s = BackupSnapshot(settings: Settings(
+        return Settings(
             baseCurrency: base,
             chaos: ud.object(forKey: chaosModeKey) as? Bool,
             scheduleWindowDays: ud.object(forKey: scheduleWindowKey) as? Int,
             reportsPeriod: ud.object(forKey: "reportsPeriod") as? Int,
             digestEnabled: EveningNotifier.shared.enabled,
-            digestMinutes: EveningNotifier.shared.minutes))
+            digestMinutes: EveningNotifier.shared.minutes)
+    }
+
+    /// Собирает копию из базы. Работает с любым контекстом, в том числе фоновым.
+    static func make(ctx: ModelContext, settings: Settings) throws -> BackupSnapshot {
+        var s = BackupSnapshot(settings: settings)
 
         let accounts = try ctx.fetch(FetchDescriptor<Account>(sortBy: [SortDescriptor(\.sortID)]))
         var accountID: [PersistentIdentifier: Int] = [:]

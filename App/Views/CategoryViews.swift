@@ -174,6 +174,7 @@ struct CategoryFormView: View {
                             Button { icon = i } label: {
                                 Image(systemName: i).frame(width: 40, height: 40)
                                     .background(icon == i ? Color.accentColor.opacity(0.2) : Color.clear, in: Circle())
+                                    .accessibilityAddTraits(icon == i ? .isSelected : [])
                             }.buttonStyle(.plain)
                         }
                     }
@@ -185,6 +186,9 @@ struct CategoryFormView: View {
                                 Circle().fill(Color.category(c)).frame(width: 30, height: 30)
                                     .overlay { if color == c { Image(systemName: "checkmark").foregroundStyle(.white) } }
                             }.buttonStyle(.plain)
+                            // Без подписи озвучка экрана читала бы двенадцать одинаковых «кнопка».
+                            .accessibilityLabel(Text(LocalizedStringKey("color.\(c)")))
+                            .accessibilityAddTraits(color == c ? .isSelected : [])
                         }
                     }
                 }

@@ -24,7 +24,7 @@ struct LargeExpensesReport: View {
                     ReportCard {
                         ForEach(Array(top.enumerated()), id: \.offset) { _, t in
                             HStack(spacing: 10) {
-                                CategoryBadge(category: data.categories[data.catKey(t)], size: 32)
+                                CategoryBadge(info: data.categories[data.catKey(t)], size: 32)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(t.payee.trimmingCharacters(in: .whitespaces).isEmpty ? data.noPayee : t.payee).font(.app(.body, .medium)).lineLimit(1)
                                     Text(t.date.shortDay).font(.app(.caption)).foregroundStyle(.secondary)

@@ -43,19 +43,12 @@ import LedgerCore
 
     func convert(_ amount: Decimal, from: String, to: String) -> Decimal? { table.convert(amount, from: from, to: to) }
 
-    /// Курс операции в валюту `code`: сохранённый на момент операции, если он записан для этой валюты, иначе текущий.
-    func rate(of tx: LedgerTransaction, to code: String) -> Decimal? {
-        if !tx.baseCode.isEmpty, tx.baseCode == code { return tx.rateToBase }
-        if let r = rate(tx.currency, code) { return r }
-        // Валюты операции нет в таблице курсов: идём через сохранённый в операции курс к прежней основной валюте.
-        guard !tx.baseCode.isEmpty, let hop = rate(tx.baseCode, code) else { return nil }
-        return tx.rateToBase * hop
-    }
+    /// Курсы и основная валюта на этот момент: по ним можно считать и вне главного потока.
+    var snapshot: RateSnapshot { RateSnapshot(table: table, base: base) }
 
-    /// Сумма операции в валюте `code` по курсу операции. nil, если курса нет.
-    func value(of tx: LedgerTransaction, in code: String) -> Decimal? {
-        rate(of: tx, to: code).map { Money.convert(tx.amount, rate: $0, scale: Money.fractionDigits(code)) }
-    }
+    func rate(of tx: LedgerTransaction, to code: String) -> Decimal? { snapshot.rate(of: tx, to: code) }
+
+    func value(of tx: LedgerTransaction, in code: String) -> Decimal? { snapshot.value(of: tx, in: code) }
 
     /// Записывает в операцию текущий курс её валюты к основной.
     func stamp(_ tx: LedgerTransaction) {
@@ -113,5 +106,29 @@ import LedgerCore
         ud.set(table.perUSD.mapValues { "\($0)" }, forKey: Keys.table)
         ud.set(table.date, forKey: Keys.date)
         ud.set(lastUpdated, forKey: Keys.updated)
+    }
+}
+
+/// Курсы и основная валюта на один момент. Неизменяемая копия, поэтому ей можно пользоваться в фоне.
+struct RateSnapshot: Equatable, @unchecked Sendable {
+    let table: RateTable
+    let base: String
+
+    func rate(_ from: String, _ to: String) -> Decimal? { table.rate(from: from, to: to) }
+
+    func convert(_ amount: Decimal, from: String, to: String) -> Decimal? { table.convert(amount, from: from, to: to) }
+
+    /// Курс операции в валюту `code`: сохранённый на момент операции, если он записан для этой валюты, иначе текущий.
+    func rate(of tx: LedgerTransaction, to code: String) -> Decimal? {
+        if !tx.baseCode.isEmpty, tx.baseCode == code { return tx.rateToBase }
+        if let r = rate(tx.currency, code) { return r }
+        // Валюты операции нет в таблице курсов: идём через сохранённый в операции курс к прежней основной валюте.
+        guard !tx.baseCode.isEmpty, let hop = rate(tx.baseCode, code) else { return nil }
+        return tx.rateToBase * hop
+    }
+
+    /// Сумма операции в валюте `code` по курсу операции. nil, если курса нет.
+    func value(of tx: LedgerTransaction, in code: String) -> Decimal? {
+        rate(of: tx, to: code).map { Money.convert(tx.amount, rate: $0, scale: Money.fractionDigits(code)) }
     }
 }
