@@ -24,7 +24,7 @@ struct BudgetsView: View {
             .contentMargins(.bottom, 90, for: .scrollContent)
             .navigationTitle("tab.budgets")
             .themedScreen()
-            .toolbar { Button("budgets.add", systemImage: "plus.circle") { showNew = true } }
+            .toolbar { Button("budgets.add") { showNew = true } }
             .sheet(isPresented: $showNew) { NewBudgetView() }
             .sheet(item: $editing) { NewBudgetView(budget: $0) }
             // Тап по бюджету открывает его операции; изменить бюджет можно оттуда или долгим нажатием.

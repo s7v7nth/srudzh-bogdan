@@ -7,6 +7,7 @@ struct RootView: View {
     @State private var addType: TxType?
     @State private var fanOpen = false
     @State private var tab = 0
+    @State private var keyboardUp = false
     @Environment(\.scenePhase) private var phase
     @Query(filter: #Predicate<LedgerTransaction> { $0.smsReview != 0 }) private var pendingSMS: [LedgerTransaction]
     @State private var showReview = false
@@ -49,8 +50,11 @@ struct RootView: View {
         }
 
         .overlay(alignment: .bottomTrailing) {
-            if !(chaos && tab == 0) { addMenu }
+            // Над клавиатурой плюс не нужен: он закрывал бы поле поиска и список.
+            if !(chaos && tab == 0), !keyboardUp { addMenu }
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardUp = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardUp = false }
         .sheet(item: $addType) { AddTransactionView(type: $0) }
         .sheet(isPresented: $showReview) { SMSReviewView() }
         .sheet(isPresented: $askBackup, onDismiss: { AutoBackup.shared.asked = true }) { BackupPromptSheet() }

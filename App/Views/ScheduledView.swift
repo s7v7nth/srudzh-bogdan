@@ -28,7 +28,7 @@ struct ScheduledView: View {
             .contentMargins(.bottom, 90, for: .scrollContent)
             .navigationTitle("tab.scheduled")
             .themedScreen()
-            .toolbar { Button("sched.add", systemImage: "plus.circle") { showNew = true } }
+            .toolbar { Button("sched.add") { showNew = true } }
             .sheet(isPresented: $showNew) { NewRecurringView() }
             .sheet(item: $editing) { EditAmountView(item: $0) }
             .sheet(item: $converting) { ConvertToLoanView(item: $0) }
@@ -80,13 +80,27 @@ struct ScheduledView: View {
         }
     }
 
+    /// «11 дек. · каждый месяц · → Кредит». Слово «следующий» не пишем: это и так ясно из группы.
     private func subtitle(_ r: RecurringTransaction) -> String {
         guard r.active else { return String(localized: "sched.finished") }
-        let unit = [String(localized: "period.day"), String(localized: "period.week"), String(localized: "period.month"), String(localized: "period.year")][r.repeatType - 1].lowercased()
-        let every = fmt("sched.every", r.duration, unit)
-        let prefix = String(localized: r.nextDate <= .now ? "sched.overdueSince" : "sched.next")
+        let date = r.nextDate <= .now ? "\(String(localized: "sched.overdueSince")) \(r.nextDate.shortDay)" : r.nextDate.shortDay
         let target = r.toAccount.map { " · → \($0.name)" } ?? ""
-        return "\(prefix) \(r.nextDate.shortDay) · \(every)\(target)"
+        return "\(date) · \(Self.cadence(r))\(target)"
+    }
+
+    /// Как часто повторяется платёж, обычными словами.
+    static func cadence(_ r: RecurringTransaction) -> String {
+        let n = r.duration
+        switch (r.repeatType, n == 1) {
+        case (1, true): return String(localized: "sched.rep1.day")
+        case (2, true): return String(localized: "sched.rep1.week")
+        case (3, true): return String(localized: "sched.rep1.month")
+        case (4, true): return String(localized: "sched.rep1.year")
+        case (1, false): return fmt("sched.repN.day", n)
+        case (2, false): return fmt("sched.repN.week", n)
+        case (4, false): return fmt("sched.repN.year", n)
+        default: return n == 1 ? String(localized: "sched.rep1.month") : fmt("sched.repN.month", n)
+        }
     }
 
     private func execute(_ r: RecurringTransaction) { r.execute(in: ctx, rates: rates) }

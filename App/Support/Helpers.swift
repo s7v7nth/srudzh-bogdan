@@ -91,7 +91,11 @@ struct AmountField: View {
 }
 
 extension Date {
-    var shortDay: String { formatted(date: .abbreviated, time: .omitted) }
+    /// «11 дек.»; год пишем, только если дата не в этом году.
+    var shortDay: String {
+        let style = Date.FormatStyle.dateTime.day().month(.abbreviated)
+        return formatted(Calendar.current.isDate(self, equalTo: .now, toGranularity: .year) ? style : style.year())
+    }
 }
 
 /// Замер тяжёлых расчётов. В отладочной сборке с аргументом -perfLog печатает в консоль, сколько занял расчёт.

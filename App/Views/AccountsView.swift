@@ -96,7 +96,7 @@ struct AccountsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("settings.title", systemImage: "gearshape") { showSettings = true } }
                 ToolbarItem(placement: .topBarLeading) { Button("wallet.title", systemImage: "wallet.pass") { showWallet = true } }
-                ToolbarItem(placement: .topBarTrailing) { Button("accounts.add", systemImage: "plus.circle") { showNew = true } }
+                ToolbarItem(placement: .topBarTrailing) { Button("accounts.add") { showNew = true } }
             }
             .sheet(isPresented: $showNew) { AccountFormView(nextSort: accounts.count) }
             .sheet(item: $editing) { AccountFormView(account: $0, nextSort: $0.sortID) }

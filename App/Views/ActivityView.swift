@@ -42,11 +42,13 @@ struct ActivityView: View {
         let content = List {
             Section {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         chip(nil)
                         ForEach(TxType.allCases, id: \.self) { chip($0) }
-                    }.padding(.horizontal, 16)
+                    }
                 }
+                // Если фильтры всё же не влезли (крупный шрифт), они уезжают за край экрана, а не обрезаются посреди слова.
+                .scrollClipDisabled()
             }
             .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
             if list.isEmpty {
@@ -188,10 +190,17 @@ private struct DayHeader: View {
     let items: [LedgerTransaction]
     @Environment(RatesStore.self) private var rates
 
+    /// «четверг, 12 ноября»; год дописывается только для прошлых лет.
+    private var title: String {
+        let sameYear = Calendar.current.isDate(day, equalTo: .now, toGranularity: .year)
+        let style = Date.FormatStyle.dateTime.weekday(.wide).day().month(.wide)
+        return day.formatted(sameYear ? style : style.year())
+    }
+
     var body: some View {
         let total = items.reduce(Decimal(0)) { $0 + (rates.value(of: $1, in: rates.base) ?? 0) }
         HStack {
-            Text(day.formatted(date: .complete, time: .omitted))
+            Text(title)
             Spacer()
             if total != 0 {
                 MoneyText(amount: total, code: rates.base, colored: true, signed: true, weight: .semibold)
