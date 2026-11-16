@@ -5,6 +5,8 @@ struct ActivityView: View {
     var account: Account? = nil
     /// Если задан, показываются только операции из категорий бюджета (как он их считает).
     var budget: Budget? = nil
+    /// Если задана, показываются операции этой категории и её подкатегорий.
+    var category: Category? = nil
     /// Текст в поле поиска и открытые окна лежат вне состояния экрана: набор букв и нажатие на строку
     /// не заставляют заново перебирать все операции. Список перестраивается, когда меняется `query`.
     @State private var ui = ActivityUI()
@@ -15,20 +17,21 @@ struct ActivityView: View {
     var body: some View {
         // Общий список без поиска и фильтра берёт из базы только последние операции: он открыт всё время,
         // и после каждой правки перечитывать всю историю ради него слишком дорого.
-        let limited = account == nil && budget == nil && ui.query.isEmpty && typeFilter == nil
-        let content = ActivityList(account: account, budget: budget, search: ui.query, typeFilter: $typeFilter, ui: ui,
+        let limited = account == nil && budget == nil && category == nil && ui.query.isEmpty && typeFilter == nil
+        let content = ActivityList(account: account, budget: budget, category: category, search: ui.query, typeFilter: $typeFilter, ui: ui,
                                    limit: limited ? limit : nil) { limit += ActivityList.page }
             // Поле поиска всегда сверху под заголовком: на iOS 26 системное место внизу закрыто нашей панелью вкладок.
             .searchable(text: Binding(get: { ui.text }, set: { ui.type($0) }), placement: .navigationBarDrawer(displayMode: .always), prompt: Text("activity.search"))
             .themedScreen()
-            .navigationTitle(budget?.name ?? account?.name ?? String(localized: "tab.activity"))
+            
+            .navigationTitle(budget?.name ?? category?.name ?? account?.name ?? String(localized: "tab.activity"))
             .toolbar {
                 if let account { Button("common.edit") { ui.editingAccount = account } }
                 if let budget { Button("common.edit") { ui.editingBudget = budget } }
             }
             .modifier(ActivitySheets(ui: ui))
 
-        if account == nil && budget == nil { NavigationStack { content } } else { content }
+        if account == nil && budget == nil && category == nil { NavigationStack { content } } else { content }
     }
 }
 
@@ -41,26 +44,29 @@ private struct ActivityList: View {
     @Query private var all: [LedgerTransaction]
     let account: Account?
     let budget: Budget?
+    let category: Category?
     let search: String
     @Binding var typeFilter: TxType?
     let ui: ActivityUI
     let limit: Int?
     let onMore: () -> Void
 
-    init(account: Account?, budget: Budget?, search: String, typeFilter: Binding<TxType?>, ui: ActivityUI,
+    init(account: Account?, budget: Budget?, category: Category?, search: String, typeFilter: Binding<TxType?>, ui: ActivityUI,
          limit: Int?, onMore: @escaping () -> Void) {
         var d = FetchDescriptor<LedgerTransaction>(sortBy: [SortDescriptor(\.date, order: .reverse)])
         if let limit { d.fetchLimit = limit }
         _all = Query(d)
-        self.account = account; self.budget = budget; self.search = search
+        self.account = account; self.budget = budget; self.category = category; self.search = search
         _typeFilter = typeFilter; self.ui = ui; self.limit = limit; self.onMore = onMore
     }
 
     /// Один проход по всем операциям вместо трёх отдельных фильтров.
     private var filtered: [LedgerTransaction] {
         let budgetCategories: Set<UUID>? = budget.map { b in Set(b.categories.flatMap(\.familyIDs)) }
+        let categoryIDs = category?.familyIDs
         return all.filter { t in
             (account == nil || t.account === account)
+                && (categoryIDs == nil || t.category.map { categoryIDs!.contains($0.uuid) } ?? false)
                 && (budgetCategories.map { inBudget(t, $0) } ?? true)
                 && (typeFilter == nil || t.type == typeFilter)
                 && (search.isEmpty || t.payee.localizedCaseInsensitiveContains(search)

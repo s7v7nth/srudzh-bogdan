@@ -30,6 +30,8 @@ struct ChaosHomeView: View {
     @State private var editingAccount: Account?
     @State private var editingCategory: Category?
     @State private var openLoan: Account?
+    @State private var openAccount: Account?
+    @State private var openCategory: Category?
     /// Перетаскивание, которое открыло окно операции: после сохранения из источника в получателя летят монетки.
     @State private var pendingDrop: (source: NodeID, target: NodeID)?
     @State private var dropSaved = false
@@ -149,7 +151,7 @@ struct ChaosHomeView: View {
             }
             .background(LongPressDragHost(
                 enabled: isVisible && request == nil && !showSettings && !showWallet && !showNewAccount && newCategory == nil
-                    && editingAccount == nil && editingCategory == nil && openLoan == nil,
+                    && editingAccount == nil && editingCategory == nil && openLoan == nil && openAccount == nil && openCategory == nil,
                 onBegan: { p in
                     guard let id = live.frames.first(where: { $0.value.contains(p) })?.key,
                           let color = color(of: id) else { return false }
@@ -188,6 +190,12 @@ struct ChaosHomeView: View {
                         ToolbarItem(placement: .cancellationAction) { Button("common.done") { openLoan = nil } }
                     }
                 }
+            }
+            .sheet(item: $openAccount) { a in
+                NavigationStack { ActivityView(account: a).toolbar { ToolbarItem(placement: .cancellationAction) { Button("common.done") { openAccount = nil } } } }
+            }
+            .sheet(item: $openCategory) { c in
+                NavigationStack { ActivityView(category: c).toolbar { ToolbarItem(placement: .cancellationAction) { Button("common.done") { openCategory = nil } } } }
             }
             .modifier(DragFeedback(live: live))
         }
@@ -656,11 +664,8 @@ struct ChaosHomeView: View {
             if let a = account(id) { editingAccount = a } else if let c = category(id) { editingCategory = c }
             return
         }
-        if let a = account(id) { if a.isLoan { openLoan = a } else { request = AddRequest(type: .expense, from: a) } }
-        else if let c = category(id) {
-            request = c.isIncome ? AddRequest(type: .income, from: accounts.first, category: c)
-                                 : AddRequest(type: .expense, from: accounts.first, category: c)
-        }
+        if let a = account(id) { if a.isLoan { openLoan = a } else { openAccount = a } }
+        else if let c = category(id) { openCategory = c }
     }
 
     fileprivate struct ZonesKey: PreferenceKey {

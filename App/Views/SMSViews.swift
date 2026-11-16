@@ -13,13 +13,20 @@ struct SMSReviewView: View {
     private var quiz: [LedgerTransaction] { pending.filter { $0.review == .quiz && !skipped.contains($0.persistentModelID) } }
     private var digest: [LedgerTransaction] { pending.filter { $0.review == .digest } }
 
+    /// Меняется, когда на экране должна смениться операция: по нему идёт анимация свайпа.
+    private var stepKey: String {
+        if let tx = pending.first(where: { $0.review == .account }) { return "a\(tx.persistentModelID.hashValue)" }
+        if let tx = quiz.first { return "q\(tx.persistentModelID.hashValue)" }
+        return "d"
+    }
+
     var body: some View {
         NavigationStack {
             Group {
                 if let tx = pending.first(where: { $0.review == .account }) {
                     SMSAccountStep(tx: tx)
                 } else if let tx = quiz.first {
-                    SMSQuizStep(tx: tx, remaining: quiz.count) { withAnimation(.easeInOut(duration: 0.3)) { _ = skipped.insert(tx.persistentModelID) } }
+                    SMSQuizStep(tx: tx, remaining: quiz.count) { _ = skipped.insert(tx.persistentModelID) }
                         .id(tx.persistentModelID)
                         .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                 } else if !digest.isEmpty {
@@ -32,6 +39,7 @@ struct SMSReviewView: View {
                     ContentUnavailableView("sms.allDone", systemImage: "checkmark.circle", description: Text("sms.allDoneHint"))
                 }
             }
+            .animation(.easeInOut(duration: 0.35), value: stepKey)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("sms.later") { dismiss() } } }
         }
         .onAppear { SMSImporter.reclassifyQuizItems(ctx: ctx) }
@@ -167,8 +175,8 @@ private struct SMSQuizStep: View {
         picked = c.id
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            withAnimation(.easeInOut(duration: 0.3)) { SMSImporter.answer(tx, with: c, ctx: ctx) }
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            SMSImporter.answer(tx, with: c, ctx: ctx)
         }
     }
 }
