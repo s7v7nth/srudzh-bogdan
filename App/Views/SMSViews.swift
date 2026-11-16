@@ -19,7 +19,9 @@ struct SMSReviewView: View {
                 if let tx = pending.first(where: { $0.review == .account }) {
                     SMSAccountStep(tx: tx)
                 } else if let tx = quiz.first {
-                    SMSQuizStep(tx: tx, remaining: quiz.count) { skipped.insert(tx.persistentModelID) }
+                    SMSQuizStep(tx: tx, remaining: quiz.count) { withAnimation(.easeInOut(duration: 0.3)) { _ = skipped.insert(tx.persistentModelID) } }
+                        .id(tx.persistentModelID)
+                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                 } else if !digest.isEmpty {
                     SMSDigestStep(items: digest) {
                         digest.forEach { $0.review = .done }
@@ -104,6 +106,7 @@ private struct SMSQuizStep: View {
     @State private var renaming = false
     @State private var newName = ""
     @State private var pickingTransfer = false
+    @State private var picked: Category.ID?
 
     private var expenseCats: [Category] { cats.filter { !$0.isIncome && !$0.archived } }
     private var suggested: [Category] {
@@ -148,8 +151,24 @@ private struct SMSQuizStep: View {
     }
 
     private func row(_ c: Category) -> some View {
-        Button { SMSImporter.answer(tx, with: c, ctx: ctx) } label: {
-            HStack(spacing: 12) { CategoryBadge(category: c); Text(c.name).foregroundStyle(.primary); Spacer() }
+        let isPicked = picked == c.id
+        return Button { choose(c) } label: {
+            HStack(spacing: 12) {
+                CategoryBadge(category: c); Text(c.name).foregroundStyle(.primary); Spacer()
+                if isPicked { Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint) }
+            }
+        }
+        .listRowBackground(isPicked ? Color.accentColor.opacity(0.18) : nil)
+    }
+
+    /// Сначала подсвечиваем выбранную категорию, потом плавно уезжаем к следующей операции (она открывается сверху).
+    private func choose(_ c: Category) {
+        guard picked == nil else { return }
+        picked = c.id
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            withAnimation(.easeInOut(duration: 0.3)) { SMSImporter.answer(tx, with: c, ctx: ctx) }
         }
     }
 }
