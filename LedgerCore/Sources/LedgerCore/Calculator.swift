@@ -18,13 +18,13 @@ public enum Calculator {
         var current = ""
         for (i, ch) in t.enumerated() {
             if "+-*/".contains(ch), i > 0 {
-                guard let n = Decimal(string: current) else { return nil }
+                guard let n = number(current) else { return nil }
                 numbers.append(n); ops.append(ch); current = ""
             } else {
                 current.append(ch)
             }
         }
-        guard let last = Decimal(string: current) else { return nil }
+        guard let last = number(current) else { return nil }
         numbers.append(last)
         // Сначала × и ÷.
         var outNums: [Decimal] = [numbers[0]]
@@ -43,7 +43,7 @@ public enum Calculator {
         for (i, op) in outOps.enumerated() {
             result = op == "+" ? result + outNums[i + 1] : result - outNums[i + 1]
         }
-        return result
+        return result.isFinite ? result : nil
     }
 
     /// Результат для подстановки в поле: округлён до знаков валюты, без хвоста нулей.
@@ -52,6 +52,12 @@ public enum Calculator {
         var v = value, r = Decimal()
         NSDecimalRound(&r, &v, Money.fractionDigits(currency), .plain)
         return "\(r)"
+    }
+
+    private static func number(_ text: String) -> Decimal? {
+        guard text.wholeMatch(of: #/[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][0-9]+)?/#) != nil,
+              let value = Decimal(string: text, locale: Locale(identifier: "en_US_POSIX")), value.isFinite else { return nil }
+        return value
     }
 
     private static func normalize(_ s: String) -> String {

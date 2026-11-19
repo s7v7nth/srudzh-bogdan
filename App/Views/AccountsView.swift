@@ -172,6 +172,9 @@ struct AccountFormView: View {
     @State private var kind: AccountKind = .card
     @State private var currency = ""
     @State private var opening = ""
+    @State private var balanceText = ""
+    @State private var initialBalanceText = ""
+    @State private var saved = false
     @State private var excluded = false
     @State private var primary = true
     @State private var limit = ""
@@ -198,6 +201,8 @@ struct AccountFormView: View {
     @State private var loaded = false
 
     private var isEditing: Bool { account != nil }
+    private var balanceWasEdited: Bool { isEditing && balanceText != initialBalanceText }
+    private var targetBalance: Decimal? { Decimal.parse(balanceText) }
     private var hasTransactions: Bool { !(account?.transactions.isEmpty ?? true) }
 
     var body: some View {
@@ -214,6 +219,12 @@ struct AccountFormView: View {
                     Toggle("account.excluded", isOn: $excluded)
                 } footer: { if hasTransactions { Text("account.currencyLocked") } }
                 if submitted && name.trimmingCharacters(in: .whitespaces).isEmpty { FormError("error.name", tick: errorTick) }
+                if isEditing {
+                    Section {
+                        AmountField(title: "account.balance", text: $balanceText, code: currency)
+                        if submitted && balanceWasEdited && targetBalance == nil { FormError("error.balance", tick: errorTick) }
+                    } header: { Text("account.balance") } footer: { Text("account.balanceHint") }
+                }
 
                 if kind == .debt {
                     Section {
@@ -273,7 +284,7 @@ struct AccountFormView: View {
             .navigationTitle(isEditing ? "account.editTitle" : "account.newTitle")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("common.cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("common.save", action: save) }
+                ToolbarItem(placement: .confirmationAction) { Button("common.save", action: save).disabled(saved) }
             }
             .onAppear(perform: load)
             .onChange(of: kind) { _, k in
@@ -291,6 +302,8 @@ struct AccountFormView: View {
         guard let a = account else { currency = rates.base; return }
         loanCategory = a.loanCategoryID.flatMap { id in categories.first { $0.uuid == id } }
         owedToMe = a.debtOwedToMe; hasDue = a.debtDue != nil; dueDate = a.debtDue ?? dueDate
+        initialBalanceText = "\(balance(of: a))"
+        balanceText = initialBalanceText
         name = a.name; kind = a.kind; currency = a.currency; excluded = a.excludedFromNetWorth; primary = a.isPrimary
         limit = a.creditLimit.map { "\($0)" } ?? ""; apr = a.interestRate.map { "\($0)" } ?? ""
         statementDay = a.statementDay ?? 1; dueDays = a.dueDays ?? 20
@@ -299,12 +312,19 @@ struct AccountFormView: View {
     }
 
     private func save() {
+        guard !saved else { return }
         submitted = true
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { fail(); return }
         if kind == .creditLine, (Decimal.parse(limit) ?? 0) <= 0 { fail(); return }
         if kind == .debt, account == nil, (Decimal.parse(opening) ?? 0) == 0 { fail(); return }
         if kind == .loan, account == nil, (Decimal.parse(opening) ?? 0) <= 0 { fail(); return }
+        let target = balanceWasEdited ? targetBalance : nil
+        if balanceWasEdited && target == nil { fail(); return }
+
         let a = account ?? Account(name: name, currency: currency, kind: kind, sortID: nextSort)
+        let difference = target.map { $0 - balance(of: a) } ?? 0
+        guard difference.isFinite else { fail(); return }
+        saved = true
         a.name = name; a.kind = kind; a.excludedFromNetWorth = excluded; a.isPrimary = primary
         if !hasTransactions { a.currency = currency }
         if kind == .creditLine {
@@ -318,6 +338,12 @@ struct AccountFormView: View {
         }
         if kind == .loan {
             a.interestRate = Decimal.parse(apr); a.loanCategoryID = loanCategory?.uuid
+        }
+        if let target, difference != 0 {
+            let tx = LedgerTransaction(amount: difference, type: difference > 0 ? .income : .expense,
+                                       payee: String(localized: "account.adjustPayee"), account: a)
+            ctx.insert(tx); rates.stamp(tx)
+            if a.isLoan, -target > (a.debtPrincipal ?? 0) { a.debtPrincipal = -target }
         }
         if account == nil {
             ctx.insert(a)
@@ -350,6 +376,7 @@ struct AccountFormView: View {
                 ctx.insert(tx); rates.stamp(tx)
             }
         }
+        SaveGuard.shared.saveNow()
         Haptics.success()
         dismiss()
     }

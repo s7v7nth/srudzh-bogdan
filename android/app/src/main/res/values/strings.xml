@@ -8,6 +8,9 @@
     <string name="account_excluded">Exclude from total</string>
     <string name="account_kind">Account type</string>
     <string name="account_newTitle">New account</string>
+    <string name="account_adjustPayee">Balance adjustment</string>
+    <string name="account_balance">Current balance</string>
+    <string name="account_balanceHint">Enter the desired balance including pending transactions. The difference is saved as income or an expense.</string>
     <string name="account_opening">Opening balance</string>
     <string name="account_openingPayee">Opening balance</string>
     <string name="account_primary">Primary account</string>
@@ -76,6 +79,7 @@
     <string name="common_save">Save</string>
     <string name="edit_title">Edit operation</string>
     <string name="error_account">Choose an account</string>
+    <string name="error_balance">Enter a valid balance</string>
     <string name="error_amount">Enter an amount greater than zero</string>
     <string name="error_name">Enter a name</string>
     <string name="error_received">Enter the amount received</string>

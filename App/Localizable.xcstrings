@@ -171,6 +171,57 @@
         }
       }
     },
+    "account.balance": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current balance"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текущий остаток"
+          }
+        }
+      }
+    },
+    "account.balanceHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the desired balance including pending transactions. The difference is saved as income or an expense."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Укажи нужный остаток с учётом ожидающих операций. Разница будет записана как доход или расход."
+          }
+        }
+      }
+    },
+    "account.adjustPayee": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balance adjustment"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Корректировка остатка"
+          }
+        }
+      }
+    },
     "account.openingPayee": {
       "extractionState": "manual",
       "localizations": {
@@ -2564,6 +2615,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Выбери счёт"
+          }
+        }
+      }
+    },
+    "error.balance": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid balance"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Введи корректный остаток"
           }
         }
       }

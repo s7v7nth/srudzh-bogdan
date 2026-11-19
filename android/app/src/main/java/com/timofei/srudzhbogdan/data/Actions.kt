@@ -2,6 +2,7 @@ package com.timofei.srudzhbogdan.data
 
 import android.content.Context
 import com.timofei.srudzh.core.Account
+import com.timofei.srudzh.core.AccountKind
 import com.timofei.srudzh.core.Category
 import com.timofei.srudzh.core.Ledger
 import com.timofei.srudzh.core.SmsImporter
@@ -87,7 +88,23 @@ object Actions {
         return id
     }
 
-    fun updateAccount(a: Account) = LedgerStore.update { it.updateAccount(a.id) { a } }
+    fun updateAccount(context: Context, a: Account, targetBalance: BigDecimal?) = LedgerStore.update { l ->
+        val existing = l.account(a.id) ?: return@update l
+        val account = if (l.transactions.any { it.accountId == a.id }) a.copy(currency = existing.currency) else a
+        val target = targetBalance ?: return@update l.updateAccount(a.id) { account }
+        val difference = target.subtract(l.balance(a.id))
+        if (difference.signum() == 0) {
+            return@update l.updateAccount(a.id) { account }
+        }
+        val adjustment = Transaction(
+            amount = difference, type = if (difference.signum() > 0) TxType.INCOME else TxType.EXPENSE,
+            date = Instant.now(), payee = context.getString(R.string.account_adjustPayee), accountId = a.id,
+        )
+        val updated = if (account.kind == AccountKind.LOAN && target.negate() > (account.debtPrincipal ?: BigDecimal.ZERO)) {
+            account.copy(debtPrincipal = target.negate())
+        } else account
+        l.updateAccount(a.id) { updated }.copy(transactions = l.transactions + rates().stamp(adjustment, updated.currency))
+    }
 
     /** Удаляет счёт вместе с его операциями. Привязки карт к нему снимаются: следующее СМС снова спросит счёт. */
     fun deleteAccount(id: Int) = LedgerStore.update { l ->

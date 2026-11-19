@@ -137,6 +137,8 @@ final class CalculatorTests: XCTestCase {
         XCTAssertEqual(Calculator.evaluate("-5+2"), -3)
         XCTAssertNil(Calculator.evaluate("5+"))
         XCTAssertNil(Calculator.evaluate("5/0"))
+        XCTAssertNil(Calculator.evaluate("12.3.4"))
+        XCTAssertNil(Calculator.evaluate("12oops"))
         XCTAssertNil(Calculator.evaluate(""))
     }
     func testResultRounding() {

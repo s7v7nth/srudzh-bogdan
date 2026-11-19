@@ -75,9 +75,9 @@ object Fmt {
     }.format(value)
 
     /** Число для поля ввода: без разделителей разрядов, с запятой или точкой по языку. */
-    fun input(amount: BigDecimal): String {
+    fun input(amount: BigDecimal, signed: Boolean = false): String {
         val sep = java.text.DecimalFormatSymbols.getInstance(Locale.getDefault()).decimalSeparator
-        return amount.abs().stripTrailingZeros().toPlainString().replace('.', sep)
+        return (if (signed) amount else amount.abs()).stripTrailingZeros().toPlainString().replace('.', sep)
     }
 
     private fun zone() = ZoneId.systemDefault()

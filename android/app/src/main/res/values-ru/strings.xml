@@ -8,6 +8,9 @@
     <string name="account_excluded">Не считать в общей сумме</string>
     <string name="account_kind">Тип счёта</string>
     <string name="account_newTitle">Новый счёт</string>
+    <string name="account_adjustPayee">Корректировка остатка</string>
+    <string name="account_balance">Текущий остаток</string>
+    <string name="account_balanceHint">Укажи нужный остаток с учётом ожидающих операций. Разница будет записана как доход или расход.</string>
     <string name="account_opening">Начальный остаток</string>
     <string name="account_openingPayee">Начальный остаток</string>
     <string name="account_primary">Основной счёт</string>
@@ -76,6 +79,7 @@
     <string name="common_save">Сохранить</string>
     <string name="edit_title">Изменить операцию</string>
     <string name="error_account">Выбери счёт</string>
+    <string name="error_balance">Введи корректный остаток</string>
     <string name="error_amount">Введи сумму больше нуля</string>
     <string name="error_name">Введи название</string>
     <string name="error_received">Введи сумму зачисления</string>

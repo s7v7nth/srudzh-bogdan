@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,7 @@ import com.timofei.srudzhbogdan.ui.ConfirmDialog
 import com.timofei.srudzhbogdan.ui.CurrencySymbol
 import com.timofei.srudzhbogdan.ui.Currencies
 import com.timofei.srudzhbogdan.ui.FieldError
+import com.timofei.srudzhbogdan.ui.Fmt
 import com.timofei.srudzhbogdan.ui.ItemRow
 import com.timofei.srudzhbogdan.ui.LocalNav
 import com.timofei.srudzhbogdan.ui.Palette
@@ -45,7 +47,7 @@ import com.timofei.srudzhbogdan.ui.ValueRow
 fun AccountFormScreen(accountId: Int?) {
     val nav = LocalNav.current
     val context = LocalContext.current
-    val ledger = LedgerStore.value
+    val ledger by LedgerStore.ledger.collectAsState()
     val existing = ledger.account(accountId)
     val hasTransactions = existing != null && ledger.transactions.any { it.accountId == existing.id }
 
@@ -53,6 +55,13 @@ fun AccountFormScreen(accountId: Int?) {
     var kind by rememberSaveable { mutableStateOf(existing?.kind ?: AccountKind.CARD) }
     var currency by rememberSaveable { mutableStateOf(existing?.currency ?: ledger.base) }
     var opening by rememberSaveable { mutableStateOf("") }
+    val initialBalance = rememberSaveable {
+        existing?.let { Fmt.input(ledger.balance(it.id), signed = true) }.orEmpty()
+    }
+    var balance by rememberSaveable { mutableStateOf(initialBalance) }
+    val balanceWasEdited = existing != null && balance != initialBalance
+    val targetBalance = if (balanceWasEdited) Money.parse(balance) else null
+    var saved by remember { mutableStateOf(false) }
     var primary by rememberSaveable { mutableStateOf(existing?.isPrimary ?: true) }
     var excluded by rememberSaveable { mutableStateOf(existing?.excluded ?: false) }
     var submitted by remember { mutableStateOf(false) }
@@ -61,14 +70,18 @@ fun AccountFormScreen(accountId: Int?) {
     var confirmDelete by remember { mutableStateOf(false) }
 
     fun save() {
+        if (saved || (accountId != null && existing == null)) return
         submitted = true
-        if (name.isBlank()) return
+        if (name.isBlank() || (balanceWasEdited && targetBalance == null)) return
+        saved = true
         if (existing != null) {
             Actions.updateAccount(
+                context,
                 existing.copy(
                     name = name.trim(), kind = kind, isPrimary = primary, excluded = excluded,
-                    currency = if (hasTransactions) existing.currency else currency,
+                    currency = currency,
                 ),
+                targetBalance,
             )
         } else {
             val draft = Account(id = 0, name = name.trim(), currency = currency, kind = kind, isPrimary = primary, excluded = excluded)
@@ -105,6 +118,13 @@ fun AccountFormScreen(accountId: Int?) {
                 ToggleRow(stringResource(R.string.account_excluded), excluded) { excluded = it }
             }
             if (existing != null) {
+                Section(header = stringResource(R.string.account_balance), footer = stringResource(R.string.account_balanceHint)) {
+                    ItemRow {
+                        PlainField(balance, { balance = it }, stringResource(R.string.account_balance), Modifier.weight(1f))
+                        CurrencySymbol(currency, color = Palette.secondary)
+                    }
+                    if (submitted && balanceWasEdited && targetBalance == null) FieldError(stringResource(R.string.error_balance))
+                }
                 Section {
                     ItemRow({ confirmDelete = true }) {
                         Text(stringResource(R.string.common_delete), color = Palette.expense, modifier = Modifier.fillMaxWidth())
